@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>福音橋動畫 - 福音信息</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.85);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.1);
+        }
+        
+        h1 {
+            color: #ff6b6b;
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .subtitle {
+            font-size: 1.4rem;
+            color: #4d4d4d;
+            margin-bottom: 15px;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .animation-container {
+            flex: 1;
+            min-width: 300px;
+            height: 500px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(255, 107, 107, 0.15);
+            position: relative;
+        }
+        
+        #animation-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .controls-panel {
+            flex: 1;
+            min-width: 300px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(255, 107, 107, 0.15);
+        }
+        
+        .controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .controls-title {
+            font-size: 1.8rem;
+            color: #ff6b6b;
+        }
+        
+        .controls-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .font-toggle, .reset-btn {
+            background-color: #ffd166;
+            border: none;
+            border-radius: 50px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .font-toggle:hover, .reset-btn:hover {
+            background-color: #ffc145;
+            transform: translateY(-2px);
+        }
+        
+        .reset-btn {
+            background-color: #06d6a0;
+            color: white;
+        }
+        
+        .stage-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stage-btn {
+            padding: 18px 15px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stage-btn i {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        
+        .stage-btn.active {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stage-1 { background-color: #ffd166; color: #333; }
+        .stage-2 { background-color: #ef476f; color: white; }
+        .stage-3 { background-color: #06d6a0; color: white; }
+        .stage-4 { background-color: #118ab2; color: white; }
+        
+        .explanation-box {
+            background-color: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 10px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #ff6b6b;
+        }
+        
+        .explanation-title {
+            font-size: 1.5rem;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .explanation-text {
+            line-height: 1.7;
+            font-size: 1.1rem;
+        }
+        
+        .large-font .explanation-text {
+            font-size: 1.3rem;
+            line-height: 1.8;
+        }
+        
+        .large-font .stage-btn {
+            font-size: 1.3rem;
+            padding: 22px 15px;
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+        }
+        
+        .nav-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+            background-color: #ff6b6b;
+            color: white;
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 15px rgba(255, 107, 107, 0.3);
+        }
+        
+        .nav-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .character-legend {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+        }
+        
+        .character-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 10px;
+        }
+        
+        .character-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .character-god { background-color: #ffd700; }
+        .character-human { background-color: #06d6a0; }
+        .character-jesus { background-color: #ef476f; }
+        
+        .footer-note {
+            text-align: center;
+            padding: 20px;
+            font-size: 1rem;
+            color: #666;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        
+        .stage-indicator {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.2rem;
+            color: #118ab2;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .stage-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .animation-container {
+                height: 400px;
+            }
+            
+            .character-legend {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .controls-actions {
+                flex-direction: column;
+            }
+        }
+        
+        .resurrection-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(255, 255, 200, 0.3) 0%, transparent 70%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-church"></i> 福音橋動畫</h1>
+            <p class="subtitle">通過3D動畫和簡單解釋，了解上帝為我們預備的救恩之路</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="animation-container">
+                <canvas id="animation-canvas"></canvas>
+                <div class="resurrection-glow" id="resurrection-glow"></div>
+                <div class="stage-indicator" id="stage-indicator">第一階段：神起初創造</div>
+            </div>
+            
+            <div class="controls-panel" id="controls-panel">
+                <div class="controls-header">
+                    <h2 class="controls-title">福音信息階段</h2>
+                    <div class="controls-actions">
+                        <button class="font-toggle" id="font-toggle">
+                            <i class="fas fa-text-height"></i> 字體大小
+                        </button>
+                        <button class="reset-btn" id="reset-btn">
+                            <i class="fas fa-redo"></i> 重新開始
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="stage-buttons">
+                    <button class="stage-btn stage-1 active" data-stage="1">
+                        <i class="fas fa-seedling"></i>
+                        神起初創造
+                    </button>
+                    <button class="stage-btn stage-2" data-stage="2">
+                        <i class="fas fa-ban"></i>
+                        人犯罪墜落
+                    </button>
+                    <button class="stage-btn stage-3" data-stage="3">
+                        <i class="fas fa-cross"></i>
+                        耶穌十架作橋樑
+                    </button>
+                    <button class="stage-btn stage-4" data-stage="4">
+                        <i class="fas fa-hands-helping"></i>
+                        神人關係復和
+                    </button>
+                </div>
+                
+                <div class="explanation-box">
+                    <h3 class="explanation-title">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="explanation-title">神起初創造</span>
+                    </h3>
+                    <p class="explanation-text" id="explanation-text">
+                        起初，神創造了天地和萬物。祂按照自己的形象創造了人類，賜給我們生命、自由意志和美好的世界。神與人有着親密的關係，如同父親與子女。在伊甸園中，人與神同行，享受完美的愛與平安。
+                    </p>
+                </div>
+                
+                <div class="character-legend">
+                    <div class="character-item">
+                        <div class="character-color character-god"></div>
+                        <span>神</span>
+                    </div>
+                    <div class="character-item">
+                        <div class="character-color character-human"></div>
+                        <span>人</span>
+                    </div>
+                    <div class="character-item">
+                        <div class="character-color character-jesus"></div>
+                        <span>耶穌（復活後）</span>
+                    </div>
+                </div>
+                
+                <div class="navigation">
+                    <button class="nav-btn" id="prev-btn" disabled>
+                        <i class="fas fa-arrow-left"></i> 上一步
+                    </button>
+                    <button class="nav-btn" id="next-btn">
+                        下一步 <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer-note">
+            <p>這個互動動畫以簡單易懂的方式介紹福音橋的核心信息。無論您的年齡或背景，都歡迎您探索這充滿盼望的救恩。</p>
+        </div>
+    </div>
+
+    <script>
+        // 3D動畫設置
+        let scene, camera, renderer, bridge, water, clouds = [];
+        let god, human, jesus, cross; // 角色物件
+        let currentStage = 1;
+        let isLargeFont = false;
+        let resurrectionGlow;
+        let middleBridge, bridgePlank; // 橋樑部件
+        let stars = []; // 星星陣列
+        let rainbows = []; // 彩虹陣列
+        let grassBlades = []; // 草地葉片陣列
+        
+        // 初始化Three.js場景
+        function init3DScene() {
+            const canvas = document.getElementById('animation-canvas');
+            
+            // 清除現有場景（如果存在）
+            if (scene) {
+                // 清除所有物件
+                while(scene.children.length > 0) { 
+                    scene.remove(scene.children[0]); 
+                }
+            }
+            
+            // 創建新場景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xe0f7ff);
+            
+            // 創建相機
+            camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+            camera.position.set(0, 5, 15);
+            
+            // 創建渲染器
+            if (!renderer) {
+                renderer = new THREE.WebGLRenderer({ 
+                    canvas, 
+                    antialias: true,
+                    alpha: true
+                });
+            }
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.setPixelRatio(window.devicePixelRatio); // 設置像素比
+            
+            // 重置變數
+            clouds = [];
+            stars = [];
+            rainbows = [];
+            grassBlades = [];
+            
+            // 添加光源
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xfff4d6, 0.8);
+            directionalLight.position.set(10, 20, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -20;
+            directionalLight.shadow.camera.right = 20;
+            directionalLight.shadow.camera.top = 20;
+            directionalLight.shadow.camera.bottom = -20;
+            scene.add(directionalLight);
+            
+            // 添加地面 - 使用單一材質避免閃爍
+            const groundGeometry = new THREE.PlaneGeometry(40, 40);
+            const groundMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x7ec850,
+                side: THREE.DoubleSide,
+                depthWrite: true, // 確保深度寫入
+                depthTest: true   // 確保深度測試
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = Math.PI / 2;
+            ground.position.y = -2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            
+            // 添加草地紋理 - 改進版，避免閃爍
+            const grassTexture = new THREE.MeshLambertMaterial({ 
+                color: 0x5db142,
+                side: THREE.DoubleSide,
+                depthWrite: false, // 草地不需要深度寫入，減少閃爍
+                depthTest: true
+            });
+            
+            // 創建草地群組
+            const grassGroup = new THREE.Group();
+            for(let i = 0; i < 30; i++) { // 減少草地數量
+                const blade = new THREE.Mesh(
+                    new THREE.PlaneGeometry(0.1, 0.3 + Math.random() * 0.3),
+                    grassTexture
+                );
+                blade.rotation.x = Math.PI / 2;
+                blade.rotation.z = Math.random() * Math.PI * 2;
+                blade.position.set(
+                    (Math.random() - 0.5) * 30,
+                    -1.9,
+                    (Math.random() - 0.5) * 30
+                );
+                grassGroup.add(blade);
+                grassBlades.push(blade);
+            }
+            scene.add(grassGroup);
+            
+            // 創建峽谷
+            createCanyon();
+            
+            // 創建初始橋樑（包含所有部件，但控制可見性）
+            createBridge();
+            
+            // 創建角色
+            createCharacters();
+            
+            // 添加雲朵
+            createClouds();
+            
+            // 添加遠處的山
+            createMountains();
+            
+            // 添加峽谷中的水
+            createWater();
+            
+            // 添加星星（在階段4顯示）
+            createStars();
+            
+            // 創建十字架（單獨的物件，不是橋的一部分）
+            createCross();
+            
+            // 創建彩虹（但初始不可見）
+            createRainbow();
+            
+            // 獲取復活榮光效果元素
+            resurrectionGlow = document.getElementById('resurrection-glow');
+            
+            // 設置場景初始狀態
+            updateSceneForStage(1);
+            
+            // 開始動畫循環
+            animate();
+            
+            // 窗口大小調整處理
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        // 創建峽谷
+        function createCanyon() {
+            const canyonGeometry = new THREE.BoxGeometry(30, 4, 10);
+            const canyonMaterial = new THREE.MeshLambertMaterial({ color: 0xb38e5d });
+            const canyon1 = new THREE.Mesh(canyonGeometry, canyonMaterial);
+            canyon1.position.set(-8, -4, 0);
+            canyon1.receiveShadow = true;
+            scene.add(canyon1);
+            
+            const canyon2 = new THREE.Mesh(canyonGeometry, canyonMaterial);
+            canyon2.position.set(8, -4, 0);
+            canyon2.receiveShadow = true;
+            scene.add(canyon2);
+        }
+        
+        // 創建橋樑（包含所有部件，通過可見性控制）
+        function createBridge() {
+            const bridgeGroup = new THREE.Group();
+            
+            // 左側橋段
+            const leftBridgeGeometry = new THREE.BoxGeometry(6, 0.5, 3);
+            const bridgeMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+            const leftBridge = new THREE.Mesh(leftBridgeGeometry, bridgeMaterial);
+            leftBridge.position.set(-5, -1, 0);
+            leftBridge.castShadow = true;
+            bridgeGroup.add(leftBridge);
+            
+            // 右側橋段
+            const rightBridgeGeometry = new THREE.BoxGeometry(6, 0.5, 3);
+            const rightBridge = new THREE.Mesh(rightBridgeGeometry, bridgeMaterial);
+            rightBridge.position.set(5, -1, 0);
+            rightBridge.castShadow = true;
+            bridgeGroup.add(rightBridge);
+            
+            // 中間橋段（完整橋樑用）
+            const middleBridgeGeometry = new THREE.BoxGeometry(4, 0.5, 3);
+            middleBridge = new THREE.Mesh(middleBridgeGeometry, bridgeMaterial);
+            middleBridge.position.set(0, -1, 0);
+            middleBridge.castShadow = true;
+            middleBridge.visible = true; // 階段1和4可見
+            bridgeGroup.add(middleBridge);
+            
+            // 連接板子（階段3用）
+            const bridgePlankGeometry = new THREE.BoxGeometry(4, 0.3, 3);
+            bridgePlank = new THREE.Mesh(bridgePlankGeometry, bridgeMaterial);
+            bridgePlank.position.set(0, -1, 0);
+            bridgePlank.castShadow = true;
+            bridgePlank.visible = false; // 階段3可見
+            bridgeGroup.add(bridgePlank);
+            
+            // 左側橋墩
+            const leftPillarGeometry = new THREE.CylinderGeometry(0.5, 0.8, 4);
+            const leftPillar = new THREE.Mesh(leftPillarGeometry, bridgeMaterial);
+            leftPillar.position.set(-8, -4, 0);
+            leftPillar.castShadow = true;
+            bridgeGroup.add(leftPillar);
+            
+            // 右側橋墩
+            const rightPillarGeometry = new THREE.CylinderGeometry(0.5, 0.8, 4);
+            const rightPillar = new THREE.Mesh(rightPillarGeometry, bridgeMaterial);
+            rightPillar.position.set(8, -4, 0);
+            rightPillar.castShadow = true;
+            bridgeGroup.add(rightPillar);
+            
+            scene.add(bridgeGroup);
+            bridge = bridgeGroup;
+        }
+        
+        // 創建十字架（獨立物件）- 修正位置
+        function createCross() {
+            const crossGroup = new THREE.Group();
+            
+            // 垂直部分
+            const verticalGeometry = new THREE.BoxGeometry(0.5, 4, 0.5);
+            const crossMaterial = new THREE.MeshLambertMaterial({ color: 0xc41e3a });
+            const verticalBeam = new THREE.Mesh(verticalGeometry, crossMaterial);
+            verticalBeam.position.set(0, 2, 0);
+            verticalBeam.castShadow = true;
+            crossGroup.add(verticalBeam);
+            
+            // 水平部分
+            const horizontalGeometry = new THREE.BoxGeometry(4, 0.5, 0.5);
+            const horizontalBeam = new THREE.Mesh(horizontalGeometry, crossMaterial);
+            horizontalBeam.position.set(0, 4, 0);
+            horizontalBeam.castShadow = true;
+            crossGroup.add(horizontalBeam);
+            
+            crossGroup.position.set(0, -2, 0); // 修正十字架位置，在地面上方
+            crossGroup.visible = false;
+            scene.add(crossGroup);
+            cross = crossGroup;
+        }
+        
+        // 創建角色：神、人和耶穌
+        function createCharacters() {
+            // 創建神 - 使用發光的球體
+            const godGeometry = new THREE.SphereGeometry(1, 16, 16);
+            const godMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffd700,
+                transparent: true,
+                opacity: 0.9
+            });
+            god = new THREE.Mesh(godGeometry, godMaterial);
+            god.position.set(-10, 3, 0);
+            god.visible = false;
+            scene.add(god);
+            
+            // 添加神的光暈效果
+            const godGlowGeometry = new THREE.SphereGeometry(1.3, 16, 16);
+            const godGlowMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffd700,
+                transparent: true,
+                opacity: 0.3
+            });
+            const godGlow = new THREE.Mesh(godGlowGeometry, godGlowMaterial);
+            god.add(godGlow);
+            
+            // 創建人 - 使用簡單的人形
+            const humanGroup = new THREE.Group();
+            
+            // 身體
+            const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
+            const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x06d6a0 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.5;
+            body.castShadow = true;
+            humanGroup.add(body);
+            
+            // 頭部
+            const headGeometry = new THREE.SphereGeometry(0.4, 8, 8);
+            const headMaterial = new THREE.MeshLambertMaterial({ color: 0xf4a261 });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 1.5;
+            head.castShadow = true;
+            humanGroup.add(head);
+            
+            // 手臂
+            const armGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6);
+            const leftArm = new THREE.Mesh(armGeometry, bodyMaterial);
+            leftArm.position.set(-0.5, 0.8, 0);
+            leftArm.rotation.z = Math.PI / 4;
+            leftArm.castShadow = true;
+            humanGroup.add(leftArm);
+            
+            const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
+            rightArm.position.set(0.5, 0.8, 0);
+            rightArm.rotation.z = -Math.PI / 4;
+            rightArm.castShadow = true;
+            humanGroup.add(rightArm);
+            
+            human = humanGroup;
+            human.position.set(-5, -0.5, 0);
+            human.visible = false;
+            scene.add(human);
+            
+            // 創建耶穌 - 復活後充滿榮光
+            const jesusGroup = new THREE.Group();
+            
+            // 復活後的耶穌身體 - 充滿榮光
+            const jesusBodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
+            const jesusBodyMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.8
+            });
+            const jesusBody = new THREE.Mesh(jesusBodyGeometry, jesusBodyMaterial);
+            jesusBody.position.y = 0.5;
+            jesusGroup.add(jesusBody);
+            
+            // 頭部
+            const jesusHeadGeometry = new THREE.SphereGeometry(0.4, 8, 8);
+            const jesusHeadMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.8
+            });
+            const jesusHead = new THREE.Mesh(jesusHeadGeometry, jesusHeadMaterial);
+            jesusHead.position.y = 1.5;
+            jesusGroup.add(jesusHead);
+            
+            // 手臂 - 展開的姿勢
+            const jesusArmGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6);
+            const jesusLeftArm = new THREE.Mesh(jesusArmGeometry, jesusBodyMaterial);
+            jesusLeftArm.position.set(-0.5, 0.8, 0);
+            jesusGroup.add(jesusLeftArm);
+            
+            const jesusRightArm = new THREE.Mesh(jesusArmGeometry, jesusBodyMaterial);
+            jesusRightArm.position.set(0.5, 0.8, 0);
+            jesusGroup.add(jesusRightArm);
+            
+            // 添加榮光效果 - 更強的光暈
+            const jesusGlowGeometry = new THREE.SphereGeometry(1.5, 16, 16);
+            const jesusGlowMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffff00,
+                transparent: true,
+                opacity: 0.3
+            });
+            const jesusGlow = new THREE.Mesh(jesusGlowGeometry, jesusGlowMaterial);
+            jesusGlow.position.y = 0.5;
+            jesusGroup.add(jesusGlow);
+            
+            // 添加第二層光暈
+            const jesusGlow2Geometry = new THREE.SphereGeometry(2.0, 16, 16);
+            const jesusGlow2Material = new THREE.MeshBasicMaterial({ 
+                color: 0xffa500,
+                transparent: true,
+                opacity: 0.2
+            });
+            const jesusGlow2 = new THREE.Mesh(jesusGlow2Geometry, jesusGlow2Material);
+            jesusGlow2.position.y = 0.5;
+            jesusGroup.add(jesusGlow2);
+            
+            jesus = jesusGroup;
+            jesus.position.set(-4, 3, 0); // 初始位置
+            jesus.visible = false;
+            scene.add(jesus);
+            
+            // 創建耶穌在十字架上的版本（第三階段用）
+            createJesusOnCross();
+        }
+        
+        // 創建耶穌在十字架上的版本（第三階段專用）
+        function createJesusOnCross() {
+            const jesusOnCrossGroup = new THREE.Group();
+            
+            // 耶穌在十字架上的身體
+            const jesusOnCrossBodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1, 8);
+            const jesusOnCrossBodyMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0xef476f,
+                transparent: true,
+                opacity: 0.8
+            });
+            const jesusOnCrossBody = new THREE.Mesh(jesusOnCrossBodyGeometry, jesusOnCrossBodyMaterial);
+            jesusOnCrossBody.position.y = 0.5;
+            jesusOnCrossGroup.add(jesusOnCrossBody);
+            
+            // 頭部
+            const jesusOnCrossHeadGeometry = new THREE.SphereGeometry(0.4, 8, 8);
+            const jesusOnCrossHeadMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0xf4a261,
+                transparent: true,
+                opacity: 0.8
+            });
+            const jesusOnCrossHead = new THREE.Mesh(jesusOnCrossHeadGeometry, jesusOnCrossHeadMaterial);
+            jesusOnCrossHead.position.y = 1.5;
+            jesusOnCrossGroup.add(jesusOnCrossHead);
+            
+            // 手臂 - 展開在十字架上
+            const jesusOnCrossArmGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6);
+            const jesusOnCrossLeftArm = new THREE.Mesh(jesusOnCrossArmGeometry, jesusOnCrossBodyMaterial);
+            jesusOnCrossLeftArm.position.set(-0.5, 0.8, 0);
+            jesusOnCrossLeftArm.rotation.z = Math.PI / 2; // 水平伸展
+            jesusOnCrossGroup.add(jesusOnCrossLeftArm);
+            
+            const jesusOnCrossRightArm = new THREE.Mesh(jesusOnCrossArmGeometry, jesusOnCrossBodyMaterial);
+            jesusOnCrossRightArm.position.set(0.5, 0.8, 0);
+            jesusOnCrossRightArm.rotation.z = -Math.PI / 2; // 水平伸展
+            jesusOnCrossGroup.add(jesusOnCrossRightArm);
+            
+            jesusOnCrossGroup.position.set(0, 1, 0); // 在十字架中心
+            jesusOnCrossGroup.visible = false;
+            scene.add(jesusOnCrossGroup);
+            
+            // 保存為場景屬性以便訪問
+            scene.userData.jesusOnCross = jesusOnCrossGroup;
+        }
+        
+        // 創建雲朵
+        function createClouds() {
+            const cloudMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
+            
+            for(let i = 0; i < 8; i++) {
+                const cloudGroup = new THREE.Group();
+                
+                // 創建多個球體組成雲朵
+                for(let j = 0; j < 4; j++) {
+                    const size = 1 + Math.random() * 1.5;
+                    const cloudPart = new THREE.Mesh(
+                        new THREE.SphereGeometry(size, 8, 8),
+                        cloudMaterial
+                    );
+                    cloudPart.position.set(
+                        (Math.random() - 0.5) * 3,
+                        (Math.random() - 0.5) * 1.5,
+                        (Math.random() - 0.5) * 2
+                    );
+                    cloudPart.castShadow = true;
+                    cloudGroup.add(cloudPart);
+                }
+                
+                // 設置雲朵位置
+                cloudGroup.position.set(
+                    (Math.random() - 0.5) * 40,
+                    5 + Math.random() * 10,
+                    -10 - Math.random() * 10
+                );
+                
+                // 設置雲朵速度
+                cloudGroup.userData = { speed: 0.01 + Math.random() * 0.02 };
+                
+                scene.add(cloudGroup);
+                clouds.push(cloudGroup);
+            }
+        }
+        
+        // 創建山脈
+        function createMountains() {
+            const mountainMaterial = new THREE.MeshLambertMaterial({ color: 0x7a9eb1 });
+            
+            for(let i = 0; i < 5; i++) {
+                const height = 3 + Math.random() * 4;
+                const mountain = new THREE.Mesh(
+                    new THREE.ConeGeometry(5 + Math.random() * 3, height, 4),
+                    mountainMaterial
+                );
+                mountain.position.set(
+                    -15 + i * 7,
+                    -2 + height/2,
+                    -15
+                );
+                mountain.castShadow = true;
+                scene.add(mountain);
+            }
+        }
+        
+        // 創建水
+        function createWater() {
+            const waterGeometry = new THREE.PlaneGeometry(30, 10);
+            const waterMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x1e90ff,
+                transparent: true,
+                opacity: 0.7
+            });
+            water = new THREE.Mesh(waterGeometry, waterMaterial);
+            water.rotation.x = Math.PI / 2;
+            water.position.set(0, -4, 0);
+            scene.add(water);
+        }
+        
+        // 創建星星（用於階段4）
+        function createStars() {
+            const starGeometry = new THREE.SphereGeometry(0.1, 4, 4);
+            const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            
+            for(let i = 0; i < 30; i++) { // 減少星星數量
+                const star = new THREE.Mesh(starGeometry, starMaterial);
+                star.position.set(
+                    (Math.random() - 0.5) * 40,
+                    5 + Math.random() * 15,
+                    -5 - Math.random() * 20
+                );
+                star.visible = false;
+                scene.add(star);
+                stars.push(star);
+            }
+        }
+        
+        // 創建彩虹
+        function createRainbow() {
+            const rainbowCurve = new THREE.QuadraticBezierCurve3(
+                new THREE.Vector3(-10, 5, -5),
+                new THREE.Vector3(0, 15, -5),
+                new THREE.Vector3(10, 5, -5)
+            );
+            
+            const rainbowPoints = rainbowCurve.getPoints(50);
+            const rainbowGeometry = new THREE.BufferGeometry().setFromPoints(rainbowPoints);
+            
+            const colors = [0xff6b6b, 0xffa726, 0xffee58, 0x9ccc65, 0x26c6da, 0x5c6bc0, 0xab47bc];
+            
+            colors.forEach((color, index) => {
+                const rainbowMaterial = new THREE.LineBasicMaterial({ 
+                    color: color,
+                    linewidth: 2
+                });
+                const rainbowLine = new THREE.Line(rainbowGeometry, rainbowMaterial);
+                rainbowLine.position.y = -index * 0.3;
+                rainbowLine.position.z = index * 0.2;
+                rainbowLine.visible = false;
+                scene.add(rainbowLine);
+                rainbows.push(rainbowLine);
+            });
+        }
+        
+        // 窗口大小調整
+        function onWindowResize() {
+            const canvas = document.getElementById('animation-canvas');
+            camera.aspect = canvas.clientWidth / canvas.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        }
+        
+        // 動畫循環
+        let animationTime = 0;
+        let resurrectionTime = 0;
+        let resurrectionActive = false;
+        let humanWalking = false;
+        let humanWalkProgress = 0;
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            animationTime += 0.02;
+            
+            if (resurrectionActive) {
+                resurrectionTime += 0.05;
+            }
+            
+            // 旋轉雲朵
+            clouds.forEach(cloud => {
+                cloud.position.x += cloud.userData.speed;
+                if(cloud.position.x > 25) {
+                    cloud.position.x = -25;
+                }
+                
+                // 雲朵輕微上下浮動
+                cloud.position.y += Math.sin(Date.now() * 0.001 + cloud.position.x) * 0.005;
+            });
+            
+            // 水波效果 - 減少強度
+            if(water) {
+                water.rotation.z = Math.sin(Date.now() * 0.001) * 0.01;
+            }
+            
+            // 角色動畫
+            updateCharacterAnimations();
+            
+            // 復活榮光效果
+            updateResurrectionEffect();
+            
+            // 人行走動畫
+            updateHumanWalking();
+            
+            renderer.render(scene, camera);
+        }
+        
+        // 更新角色動畫
+        function updateCharacterAnimations() {
+            // 神的光暈脈動效果
+            if(god && god.visible) {
+                const glow = god.children[0];
+                if(glow) {
+                    glow.scale.setScalar(1 + 0.1 * Math.sin(animationTime));
+                }
+            }
+            
+            // 耶穌的光暈脈動效果
+            if(jesus && jesus.visible && currentStage === 4) {
+                const glow1 = jesus.children[4]; // 第一層光暈
+                const glow2 = jesus.children[5]; // 第二層光暈
+                
+                if(glow1) {
+                    glow1.scale.setScalar(1 + 0.15 * Math.sin(animationTime * 1.5));
+                }
+                if(glow2) {
+                    glow2.scale.setScalar(1 + 0.1 * Math.sin(animationTime * 1.2));
+                }
+            }
+            
+            // 人的呼吸效果（輕微上下移動）
+            if(human && human.visible && !humanWalking) {
+                human.position.y = -0.5 + 0.05 * Math.sin(animationTime * 2);
+            }
+        }
+        
+        // 更新人行走動畫
+        function updateHumanWalking() {
+            if (humanWalking && human) {
+                humanWalkProgress += 0.02;
+                
+                // 計算人在橋上的位置
+                // 從橋的右端(-5, -1, 0)走到左端(5, -1, 0)
+                const startX = 5;
+                const endX = -5;
+                const progress = Math.min(humanWalkProgress, 1);
+                
+                // 使用緩動函數使行走更自然
+                const easeProgress = progress < 0.5 
+                    ? 2 * progress * progress 
+                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                
+                human.position.x = startX + (endX - startX) * easeProgress;
+                human.position.y = -0.5 + 0.05 * Math.sin(animationTime * 2);
+                
+                // 輕微擺動手臂模擬行走
+                if (human.children[2] && human.children[3]) {
+                    human.children[2].rotation.z = Math.PI / 4 + 0.2 * Math.sin(animationTime * 10);
+                    human.children[3].rotation.z = -Math.PI / 4 + 0.2 * Math.sin(animationTime * 10);
+                }
+                
+                // 到達目的地後停止行走
+                if (progress >= 1) {
+                    humanWalking = false;
+                }
+            }
+        }
+        
+        // 更新復活榮光效果
+        function updateResurrectionEffect() {
+            if (resurrectionActive) {
+                // 榮光效果脈動
+                const intensity = 0.5 + 0.5 * Math.sin(resurrectionTime * 2);
+                resurrectionGlow.style.opacity = intensity;
+                
+                // 5秒後逐漸淡化
+                if (resurrectionTime > 5) {
+                    resurrectionActive = false;
+                    resurrectionGlow.style.opacity = 0;
+                    resurrectionTime = 0;
+                }
+            }
+        }
+        
+        // 觸發復活榮光效果
+        function triggerResurrectionEffect() {
+            resurrectionActive = true;
+            resurrectionTime = 0;
+        }
+        
+        // 根據階段更新場景
+        function updateSceneForStage(stage) {
+            currentStage = stage;
+            
+            // 階段1: 神起初創造 - 顯示完整橋樑和美麗景色，神與人在一起
+            if(stage === 1) {
+                // 顯示神和人
+                god.visible = true;
+                human.visible = true;
+                jesus.visible = false;
+                cross.visible = false;
+                
+                // 隱藏十字架上的耶穌
+                if (scene.userData.jesusOnCross) {
+                    scene.userData.jesusOnCross.visible = false;
+                }
+                
+                // 橋樑狀態：完整橋樑
+                if(middleBridge) middleBridge.visible = true;
+                if(bridgePlank) bridgePlank.visible = false;
+                
+                // 神和人的位置 - 在一起
+                god.position.set(-6, 3, 0);
+                human.position.set(-4, -0.5, 0);
+                
+                // 隱藏星星和彩虹
+                stars.forEach(star => star.visible = false);
+                rainbows.forEach(rainbow => rainbow.visible = false);
+                
+                // 恢復明亮背景
+                scene.background = new THREE.Color(0xe0f7ff);
+                
+                // 重置行走狀態
+                humanWalking = false;
+                humanWalkProgress = 0;
+                
+                // 相機位置
+                camera.position.set(0, 5, 15);
+                camera.lookAt(-5, 0, 0);
+            }
+            
+            // 階段2: 人犯罪墜落 - 橋樑斷開，人與神分離
+            else if(stage === 2) {
+                // 橋樑狀態：斷開橋樑
+                if(middleBridge) middleBridge.visible = false;
+                if(bridgePlank) bridgePlank.visible = false;
+                
+                // 顯示神和人，但分開
+                god.visible = true;
+                human.visible = true;
+                jesus.visible = false;
+                cross.visible = false;
+                
+                // 隱藏十字架上的耶穌
+                if (scene.userData.jesusOnCross) {
+                    scene.userData.jesusOnCross.visible = false;
+                }
+                
+                // 神在橋的一端，人在另一端
+                god.position.set(-10, 3, 0);
+                human.position.set(5, -0.5, 0);
+                
+                // 隱藏星星和彩虹
+                stars.forEach(star => star.visible = false);
+                rainbows.forEach(rainbow => rainbow.visible = false);
+                
+                // 添加黑暗效果
+                scene.background = new THREE.Color(0xa0a0a0);
+                
+                // 重置行走狀態
+                humanWalking = false;
+                humanWalkProgress = 0;
+                
+                // 相機位置
+                camera.position.set(0, 5, 12);
+                camera.lookAt(0, 0, 0);
+            }
+            
+            // 階段3: 耶穌十架作橋樑 - 顯示十字架連接橋樑，耶穌在十字架上
+            else if(stage === 3) {
+                // 橋樑狀態：使用連接板子
+                if(middleBridge) middleBridge.visible = false;
+                if(bridgePlank) bridgePlank.visible = true;
+                
+                // 顯示十字架和耶穌在十字架上
+                god.visible = true;
+                human.visible = true;
+                cross.visible = true;
+                jesus.visible = false; // 復活後的耶穌不可見
+                
+                // 顯示十字架上的耶穌
+                if (scene.userData.jesusOnCross) {
+                    scene.userData.jesusOnCross.visible = true;
+                    scene.userData.jesusOnCross.position.set(0, 1, 0); // 在十字架上
+                }
+                
+                // 角色位置
+                god.position.set(-10, 3, 0);
+                human.position.set(5, -0.5, 0);
+                cross.position.set(0, 0, 0); // 十字架在橋中間
+                
+                // 隱藏星星和彩虹
+                stars.forEach(star => star.visible = false);
+                rainbows.forEach(rainbow => rainbow.visible = false);
+                
+                // 恢復明亮背景
+                scene.background = new THREE.Color(0xe0f7ff);
+                
+                // 重置行走狀態
+                humanWalking = false;
+                humanWalkProgress = 0;
+                
+                // 相機位置
+                camera.position.set(0, 7, 8);
+                camera.lookAt(0, 1, 0);
+            }
+            
+            // 階段4: 神人關係復和 - 耶穌復活，三者在地上團聚
+            else if(stage === 4) {
+                // 橋樑狀態：完整橋樑
+                if(middleBridge) middleBridge.visible = true;
+                if(bridgePlank) bridgePlank.visible = false;
+                
+                // 顯示所有角色
+                god.visible = true;
+                human.visible = true;
+                cross.visible = false; // 十字架消失，因為耶穌已復活
+                jesus.visible = true; // 復活後的耶穌可見
+                
+                // 隱藏十字架上的耶穌
+                if (scene.userData.jesusOnCross) {
+                    scene.userData.jesusOnCross.visible = false;
+                }
+                
+                // 角色位置 - 耶穌復活後在神的右邊，三者在地上團聚
+                god.position.set(-6, 3, 0);
+                jesus.position.set(-4, 3, 0); // 在神的右邊
+                
+                // 人開始走向神和耶穌
+                human.position.set(5, -0.5, 0);
+                humanWalking = true;
+                humanWalkProgress = 0;
+                
+                // 顯示星星和彩虹
+                stars.forEach(star => {
+                    star.visible = true;
+                    star.scale.setScalar(0.8 + 0.5 * Math.sin(Date.now() * 0.005 + star.position.x));
+                });
+                rainbows.forEach(rainbow => rainbow.visible = true);
+                
+                // 觸發復活榮光效果
+                if(!scene.userData.resurrectionTriggered) {
+                    triggerResurrectionEffect();
+                    scene.userData.resurrectionTriggered = true;
+                }
+                
+                // 相機位置 - 觀看整個橋和角色
+                camera.position.set(0, 8, 15);
+                camera.lookAt(-2, 2, 0);
+            }
+        }
+        
+        // 福音階段內容
+        const gospelStages = [
+            {
+                title: "神起初創造",
+                text: "起初，神創造了天地和萬物。祂按照自己的形象創造了人類，賜給我們生命、自由意志和美好的世界。神與人有着親密的關係，如同父親與子女。在伊甸園中，人與神同行，享受完美的愛與平安。",
+                indicator: "第一階段：神起初創造"
+            },
+            {
+                title: "人犯罪墜落",
+                text: "然而，人類選擇違背神的命令，犯了罪。罪破壞了人與神之間的美好關係，也帶來了痛苦、死亡和與神的隔絕。這就像一座橋樑斷裂了，人無法靠自己的力量回到神那裡。聖經說：『世人都犯了罪，虧缺了神的榮耀。』",
+                indicator: "第二階段：人犯罪墜落"
+            },
+            {
+                title: "耶穌十架作橋樑",
+                text: "但神愛我們，為我們預備了救恩。祂差遣獨生子耶穌基督來到世上，為我們的罪被釘在十字架上。耶穌的死償還了罪的代價，祂的復活戰勝了死亡。現在，耶穌成為我們與神之間的橋樑，通過信靠祂，我們可以跨越罪的深淵，回到神那裡。",
+                indicator: "第三階段：耶穌十架作橋樑"
+            },
+            {
+                title: "神人關係復和",
+                text: "當我們接受耶穌為救主，我們的罪就得赦免，與神的關係得以恢復。耶穌已經復活，現在坐在神的右邊，為我們代求。我們成為神的兒女，擁有永恆的生命和屬天的平安。在永恆裡，神、人和耶穌快樂地一同生活，享受永遠的團聚與喜樂。",
+                indicator: "第四階段：神人關係復和與永恆團聚"
+            }
+        ];
+        
+        // 初始化互動功能
+        function initInteractions() {
+            // 階段按鈕事件
+            document.querySelectorAll('.stage-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const stage = parseInt(this.getAttribute('data-stage'));
+                    goToStage(stage);
+                });
+            });
+            
+            // 上一步/下一步按鈕
+            document.getElementById('prev-btn').addEventListener('click', function() {
+                if(currentStage > 1) {
+                    goToStage(currentStage - 1);
+                }
+            });
+            
+            document.getElementById('next-btn').addEventListener('click', function() {
+                if(currentStage < 4) {
+                    goToStage(currentStage + 1);
+                }
+            });
+            
+            // 大字體切換
+            document.getElementById('font-toggle').addEventListener('click', function() {
+                isLargeFont = !isLargeFont;
+                const controlsPanel = document.getElementById('controls-panel');
+                
+                if(isLargeFont) {
+                    controlsPanel.classList.add('large-font');
+                    this.innerHTML = '<i class="fas fa-text-height"></i> 正常字體';
+                } else {
+                    controlsPanel.classList.remove('large-font');
+                    this.innerHTML = '<i class="fas fa-text-height"></i> 大字體';
+                }
+            });
+            
+            // 重設按鈕
+            document.getElementById('reset-btn').addEventListener('click', function() {
+                resetAnimation();
+            });
+            
+            // 初始顯示第一階段
+            goToStage(1);
+        }
+        
+        // 跳轉到指定階段
+        function goToStage(stage) {
+            currentStage = stage;
+            
+            // 更新按鈕狀態
+            document.querySelectorAll('.stage-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(parseInt(btn.getAttribute('data-stage')) === stage) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // 更新解釋內容
+            const stageData = gospelStages[stage-1];
+            document.getElementById('explanation-title').textContent = stageData.title;
+            document.getElementById('explanation-text').textContent = stageData.text;
+            document.getElementById('stage-indicator').textContent = stageData.indicator;
+            
+            // 更新導航按鈕狀態
+            document.getElementById('prev-btn').disabled = (stage === 1);
+            document.getElementById('next-btn').disabled = (stage === 4);
+            
+            // 更新按鈕文本
+            if(stage === 4) {
+                document.getElementById('next-btn').innerHTML = '完成 <i class="fas fa-check"></i>';
+            } else {
+                document.getElementById('next-btn').innerHTML = '下一步 <i class="fas fa-arrow-right"></i>';
+            }
+            
+            // 更新場景
+            updateSceneForStage(stage);
+            
+            // 重置復活觸發標記
+            if (stage !== 4) {
+                scene.userData.resurrectionTriggered = false;
+            }
+        }
+        
+        // 重設動畫
+        function resetAnimation() {
+            // 重置階段
+            currentStage = 1;
+            
+            // 重新初始化3D場景
+            init3DScene();
+            
+            // 更新UI
+            goToStage(1);
+            
+            // 重設復活效果
+            resurrectionActive = false;
+            resurrectionTime = 0;
+            if (resurrectionGlow) {
+                resurrectionGlow.style.opacity = 0;
+            }
+        }
+        
+        // 頁面加載完成後初始化
+        window.addEventListener('load', function() {
+            init3DScene();
+            initInteractions();
+        });
+    </script>
+</body>
+</html>
