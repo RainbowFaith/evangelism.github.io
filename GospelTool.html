@@ -484,7 +484,7 @@
         const rainbowColors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x8B00FF];
         rainbowColors.forEach((color, i) => {
             const geo = new THREE.TorusGeometry(18 - i*0.4, 0.4, 16, 100, Math.PI);
-            // 透明度 0.9 讓彩虹清晰可見
+            // 彩虹透明度 0.9 
             const mat = new THREE.MeshBasicMaterial({color: color, transparent: true, opacity: 0.9, side: THREE.DoubleSide});
             const ring = new THREE.Mesh(geo, mat);
             rainbowGroup.add(ring);
@@ -495,8 +495,8 @@
 
         const cloudsGroup = new THREE.Group();
         const cloudMaterials = [];
-        // 建立 25 朵白雲
-        for(let i=0; i<25; i++) {
+        // 建立 10 朵白雲
+        for(let i=0; i<10; i++) {
             const cloud = new THREE.Group();
             const geo = new THREE.SphereGeometry(1.5, 16, 16);
             const mat = new THREE.MeshStandardMaterial({color: 0xFFFFFF, transparent: true, opacity: 0.8});
@@ -597,16 +597,17 @@
 
             switch(stageIndex) {
                 case 0: 
-                    // 階段 1：創世記 1:1<br>起初，神創造天地。
+                    // 階段 1：神創造
                     resetPositions();
                     gsap.to(camera.position, {x: 0, y: 12, z: 35, duration: 2, ease: "power2.inOut"});
                     break;
 
                 case 1: 
-                    // 階段 2：羅馬書 3:23<br>因為世人都犯了罪，虧缺了神的榮耀。
+                    // 階段 2：人犯罪
                     // 左側大地往左移動裂開深淵
                     tl.to(leftLandGroup.position, { x: -16, duration: 2, ease: "power2.inOut" }, 0);
                     tl.to(man.position, { x: -7, duration: 2, ease: "power2.inOut" }, 0);
+                      .to(camera.position, {x: -3, y: 12, z: 35, duration: 2, ease: "power2.inOut"}, 0); // 鏡頭跟隨
                     
                     // 環境變暗
                     tl.to(scene.background, { r: new THREE.Color(colors.skyDark).r, g: new THREE.Color(colors.skyDark).g, b: new THREE.Color(colors.skyDark).b, duration: 2 }, 0);
@@ -638,7 +639,7 @@
                     break;
 
                 case 2: 
-                    // 階段 3：羅馬書 6:23<br>因為罪的工價乃是死⋯
+                    // 階段 3：神人隔
                     // 確保狀態延續 (防呆跳轉)
                     if (leftLandGroup.position.x > -15) {
                         leftLandGroup.position.x = -16;
@@ -666,7 +667,7 @@
                     break;
 
                 case 3: 
-                    // 階段 4：約翰福音 3:16<br>神愛世人，甚至將他的獨生子賜給他們，叫一切信他的，不至滅亡，反得永生。
+                    // 階段 4：耶穌臨
                     if (leftLandGroup.position.x > -15) leftLandGroup.position.x = -16;
                     
                     tl.to(camera.position, {x: -3, y: 10, z: 30, duration: 1.5, ease: "power2.inOut"}, 0);
@@ -716,7 +717,7 @@
                     break;
 
                 case 4: 
-                    // 階段 5：約翰福音 10:10b<br>耶穌：「我來了，是要叫人得生命，並且得的更豐盛。」
+                    // 階段 5：神復和
                     // 確保橋樑與耶穌位置正確
                     cross.visible = true;
                     cross.position.set(-6, 0, 2);
