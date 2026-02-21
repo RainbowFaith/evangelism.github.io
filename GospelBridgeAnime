@@ -1,0 +1,941 @@
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>福音橋 - 互動3D佈道動畫</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tween.js@18.6.4/dist/tween.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            touch-action: manipulation;
+        }
+        
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #0d1b2a 0%, #0a0e17 100%);
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #info-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-top: 2px solid #4a6fa5;
+            z-index: 10;
+            transition: all 0.4s ease;
+        }
+        
+        .info-panel-large {
+            padding: 25px 20px !important;
+        }
+        
+        #stage-title {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #ffd700;
+            text-align: center;
+            margin-bottom: 12px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+            letter-spacing: 1px;
+        }
+        
+        .title-large {
+            font-size: 2.8rem !important;
+        }
+        
+        #stage-description {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            color: #e6e6e6;
+        }
+        
+        .desc-large {
+            font-size: 1.8rem !important;
+            line-height: 1.5 !important;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 20;
+            padding: 0 10px;
+        }
+        
+        .btn {
+            background: rgba(74, 111, 165, 0.85);
+            border: 2px solid #ffd700;
+            color: white;
+            font-family: 'Noto Sans TC', sans-serif;
+            font-weight: 700;
+            padding: 10px 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .btn-large {
+            padding: 15px 25px !important;
+            font-size: 1.6rem !important;
+            border-width: 3px !important;
+        }
+        
+        .btn:hover {
+            background: rgba(106, 148, 196, 0.95);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn-reset {
+            background: rgba(200, 50, 50, 0.85);
+        }
+        
+        .btn-reset:hover {
+            background: rgba(220, 70, 70, 0.95);
+        }
+        
+        .btn-accessibility {
+            background: rgba(60, 160, 80, 0.85);
+        }
+        
+        .btn-accessibility:hover {
+            background: rgba(80, 180, 100, 0.95);
+        }
+        
+        .btn-stage {
+            background: rgba(140, 90, 200, 0.85);
+        }
+        
+        .btn-stage:hover {
+            background: rgba(160, 110, 220, 0.95);
+        }
+        
+        .btn-active {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: #ffd700;
+            color: #ffd700;
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+        }
+        
+        #stage-indicators {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .indicator {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .indicator-active {
+            background: #ffd700;
+            transform: scale(1.3);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+        
+        .large-mode .indicator {
+            width: 25px !important;
+            height: 25px !important;
+        }
+        
+        #logo {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-weight: 900;
+            font-size: 1.8rem;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(20, 100, 200, 0.8);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-large {
+            font-size: 2.5rem !important;
+        }
+        
+        #logo svg {
+            width: 40px;
+            height: 40px;
+        }
+        
+        .logo-large svg {
+            width: 60px !important;
+            height: 60px !important;
+        }
+        
+        @media (max-width: 768px) {
+            #controls {
+                flex-direction: column;
+                align-items: center;
+                top: auto;
+                bottom: 180px;
+                gap: 10px;
+            }
+            
+            .btn {
+                width: 90%;
+                max-width: 300px;
+                padding: 12px;
+                font-size: 1.3rem;
+            }
+            
+            #info-panel {
+                padding: 12px 10px;
+            }
+            
+            #stage-title {
+                font-size: 1.5rem;
+            }
+            
+            #stage-description {
+                font-size: 1rem;
+            }
+        }
+        
+        @media (max-height: 600px) {
+            #controls {
+                bottom: 140px;
+            }
+        }
+        
+        .transition-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 15, 30, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+        
+        .transition-text {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ffd700;
+            text-align: center;
+            padding: 20px;
+            background: rgba(30, 40, 80, 0.7);
+            border-radius: 20px;
+            border: 2px solid #4a6fa5;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        }
+        
+        .transition-overlay.active {
+            opacity: 1;
+        }
+        
+        #footer-note {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+            z-index: 15;
+        }
+        
+        .footer-large {
+            font-size: 1.4rem !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="logo">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#ffd700" stroke-width="3"/>
+                <path d="M30 50 L45 65 L70 35" stroke="#4a6fa5" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>福音橋</span>
+        </div>
+        
+        <div id="canvas-container"></div>
+        
+        <div id="info-panel">
+            <div id="stage-title">神起初的創造</div>
+            <div id="stage-description">神創造了美好的世界，人與神之間有著親密和諧的關係。天地萬物都彰顯神的榮耀與慈愛。</div>
+            
+            <div id="stage-indicators">
+                <div class="indicator indicator-active" data-stage="1"></div>
+                <div class="indicator" data-stage="2"></div>
+                <div class="indicator" data-stage="3"></div>
+                <div class="indicator" data-stage="4"></div>
+                <div class="indicator" data-stage="5"></div>
+            </div>
+        </div>
+        
+        <div id="controls">
+            <button class="btn btn-stage" id="prev-btn">
+                <span>❮</span> 上一步
+            </button>
+            <button class="btn btn-accessibility" id="accessibility-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2a4 4 0 0 1 4 4v1a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V6a4 4 0 0 1 4-4h4z"></path>
+                    <circle cx="12" cy="16" r="3"></circle>
+                    <path d="M12 19v3"></path>
+                </svg>
+                大字模式
+            </button>
+            <button class="btn btn-reset" id="reset-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 2v6h-6"></path>
+                    <path d="M3 12A9 9 0 0 1 12 3a9.9 9.9 0 0 1 5 13.3L21 20"></path>
+                </svg>
+                重新開始
+            </button>
+            <button class="btn btn-stage" id="next-btn">
+                下一步 <span>❯</span>
+            </button>
+        </div>
+        
+        <div id="footer-note">福音動畫 | 點擊橋樑了解神的救恩</div>
+        
+        <div class="transition-overlay">
+            <div class="transition-text">神愛世人</div>
+        </div>
+    </div>
+
+    <script>
+
+        let scene, camera, renderer, controls;
+        let stage = 1;
+        let isLargeMode = false;
+        let assetsLoaded = false;
+        let objects = {};
+        let animationActive = false;
+        
+
+        const gospelContent = [
+            {
+                title: "神起初的創造",
+                description: "神創造了美好的世界，人與神之間有著親密和諧的關係。天地萬物都彰顯神的榮耀與慈愛。"
+            },
+            {
+                title: "人犯罪墜落",
+                description: "人類違背神的命令，罪進入了世界。人與神之間的橋樑斷裂了，罪帶來死亡與分離。"
+            },
+            {
+                title: "人無力自救",
+                description: "人嘗試用自己的方法回到神面前，但所有努力都失敗了。世上有苦難、孤獨、戰爭與不公。"
+            },
+            {
+                title: "神差遣耶穌",
+                description: "神差遣祂的獨生子耶穌基督，為我們的罪死在十字架上。祂的犧牲成為連接神與人的橋樑。"
+            },
+            {
+                title: "救主耶穌復活",
+                description: "耶穌從死裡復活，戰勝死亡！凡相信祂的人，都能通過這座救恩之橋，回到神的面前，得著永生。"
+            }
+        ];
+        
+
+        function init() {
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x0a0e17, 0.01);
+            
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 40);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enableZoom = true;
+            controls.minDistance = 30;
+            controls.maxDistance = 80;
+            controls.target.set(0, 5, 0);
+            
+
+            const ambientLight = new THREE.AmbientLight(0x888888, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 20, 15);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+            scene.add(directionalLight);
+
+            createScene();
+
+            assetsLoaded = true;
+
+            animate();
+            
+
+            addEventListeners();
+            
+
+            setTimeout(() => {
+                document.querySelector('.transition-overlay').classList.add('active');
+                setTimeout(() => {
+                    document.querySelector('.transition-overlay').classList.remove('active');
+                }, 1200);
+            }, 500);
+        }
+        
+
+        function createScene() {
+
+            const groundLeft = new THREE.Mesh(
+                new THREE.PlaneGeometry(60, 30),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x3a5f3a,
+                    roughness: 0.8,
+                    metalness: 0.2
+                })
+            );
+            groundLeft.rotation.x = -Math.PI / 2;
+            groundLeft.position.set(-15, 0, 0);
+            groundLeft.receiveShadow = true;
+            scene.add(groundLeft);
+            
+            const groundRight = new THREE.Mesh(
+                new THREE.PlaneGeometry(60, 30),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x5a8f5a,
+                    roughness: 0.8,
+                    metalness: 0.2
+                })
+            );
+            groundRight.rotation.x = -Math.PI / 2;
+            groundRight.position.set(15, 0, 0);
+            groundRight.receiveShadow = true;
+            scene.add(groundRight);
+
+            createCity();
+            
+            createEden();
+         
+            createBridge();
+   
+            createCharacter();
+            
+            createCross();
+            
+
+            createSky();
+        }
+        
+        function createCity() {
+
+            const buildings = [
+                { pos: [-25, 0, -10], size: [5, 10, 5], color: 0x8a8a8a },
+                { pos: [-20, 0, 5], size: [6, 15, 6], color: 0x7a7a7a },
+                { pos: [-27, 0, 8], size: [4, 8, 4], color: 0x9a9a9a },
+                { pos: [-18, 0, -8], size: [7, 12, 7], color: 0x6a6a6a }
+            ];
+            
+            buildings.forEach(building => {
+                const mesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(...building.size),
+                    new THREE.MeshStandardMaterial({ 
+                        color: building.color,
+                        roughness: 0.7,
+                        metalness: 0.1
+                    })
+                );
+                mesh.position.set(...building.pos, building.size[1]/2);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+            });
+            
+
+            const road = new THREE.Mesh(
+                new THREE.PlaneGeometry(20, 5),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x333333,
+                    roughness: 0.9
+                })
+            );
+            road.rotation.x = -Math.PI / 2;
+            road.position.set(-20, 0.1, 0);
+            scene.add(road);
+            
+            objects.city = { buildings, road };
+        }
+        
+        function createEden() {
+            // 生命樹
+            const trunk = new THREE.Mesh(
+                new THREE.CylinderGeometry(1, 1.2, 5, 8),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x8b4513,
+                    roughness: 0.9
+                })
+            );
+            trunk.position.set(20, 2.5, 0);
+            trunk.castShadow = true;
+            scene.add(trunk);
+            
+            const leaves = new THREE.Mesh(
+                new THREE.ConeGeometry(4, 8, 8),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x2e8b57,
+                    roughness: 0.7
+                })
+            );
+            leaves.position.set(20, 8, 0);
+            leaves.castShadow = true;
+            scene.add(leaves);
+
+            for (let i = 0; i < 15; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 5 + Math.random() * 8;
+                const x = 20 + Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                
+                const stem = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.1, 0.1, 2, 4),
+                    new THREE.MeshStandardMaterial({ color: 0x228b22 })
+                );
+                stem.position.set(x, 1, z);
+                scene.add(stem);
+                
+                const flowerColor = new THREE.Color(
+                    Math.random() * 0.5 + 0.5, 
+                    Math.random() * 0.5, 
+                    Math.random() * 0.5 
+                );
+                
+                const flower = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.7, 8, 8),
+                    new THREE.MeshStandardMaterial({ 
+                        color: flowerColor,
+                        roughness: 0.4
+                    })
+                );
+                flower.position.set(x, 2.5, z);
+                scene.add(flower);
+            }
+
+            const lightSphere = new THREE.Mesh(
+                new THREE.SphereGeometry(3, 16, 16),
+                new THREE.MeshBasicMaterial({ 
+                    color: 0xffffcc,
+                    transparent: true,
+                    opacity: 0.7
+                })
+            );
+            lightSphere.position.set(25, 15, 0);
+            scene.add(lightSphere);
+            
+            objects.eden = { tree: { trunk, leaves }, light: lightSphere };
+        }
+        
+        function createBridge() {
+
+            const leftBridge = new THREE.Mesh(
+                new THREE.BoxGeometry(10, 2, 4),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x8b4513,
+                    roughness: 0.8
+                })
+            );
+            leftBridge.position.set(-5, 3, 0);
+            leftBridge.castShadow = true;
+            scene.add(leftBridge);
+            
+
+            const rightBridge = new THREE.Mesh(
+                new THREE.BoxGeometry(10, 2, 4),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x8b4513,
+                    roughness: 0.8
+                })
+            );
+            rightBridge.position.set(5, 3, 0);
+            rightBridge.castShadow = true;
+            scene.add(rightBridge);
+            
+
+            const gap = new THREE.Mesh(
+                new THREE.BoxGeometry(2, 1, 4),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x1a1a1a,
+                    roughness: 0.9,
+                    transparent: true,
+                    opacity: 0.7
+                })
+            );
+            gap.position.set(0, 2.5, 0);
+            scene.add(gap);
+            
+            objects.bridge = { left: leftBridge, right: rightBridge, gap };
+        }
+        
+        function createCross() {
+
+            const crossHorizontal = new THREE.Mesh(
+                new THREE.BoxGeometry(8, 1, 1),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0xffd700,
+                    roughness: 0.3,
+                    metalness: 0.8
+                })
+            );
+            crossHorizontal.position.set(0, 6, 0);
+            crossHorizontal.visible = false;
+            crossHorizontal.castShadow = true;
+            scene.add(crossHorizontal);
+            
+
+            const crossVertical = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 10, 1),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0xffd700,
+                    roughness: 0.3,
+                    metalness: 0.8
+                })
+            );
+            crossVertical.position.set(0, 3, 0);
+            crossVertical.visible = false;
+            crossVertical.castShadow = true;
+            scene.add(crossVertical);
+            
+            objects.cross = { horizontal: crossHorizontal, vertical: crossVertical };
+        }
+        
+        function createCharacter() {
+
+            const body = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.8, 0.8, 2, 8),
+                new THREE.MeshStandardMaterial({ color: 0x3498db })
+            );
+            body.position.set(-15, 2, 0);
+            
+
+            const head = new THREE.Mesh(
+                new THREE.SphereGeometry(1, 16, 16),
+                new THREE.MeshStandardMaterial({ color: 0xf1c40f })
+            );
+            head.position.set(-15, 3.5, 0);
+            
+            scene.add(body, head);
+            objects.character = { body, head };
+        }
+        
+        function createSky() {
+            const skyGeometry = new THREE.SphereGeometry(50, 32, 32);
+            const skyMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x87ceeb,
+                side: THREE.BackSide
+            });
+            const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+            scene.add(sky);
+            objects.sky = sky;
+        }
+        
+
+        function updateStage(newStage) {
+            if (stage === newStage || animationActive) return;
+            if (!assetsLoaded) return;
+            
+            animationActive = true;
+            
+
+            document.getElementById('stage-title').textContent = gospelContent[newStage-1].title;
+            document.getElementById('stage-description').textContent = gospelContent[newStage-1].description;
+            
+
+            document.querySelectorAll('.indicator').forEach((el, i) => {
+                el.classList.toggle('indicator-active', i === newStage-1);
+            });
+            
+
+            const bridges = objects.bridge;
+            const cross = objects.cross;
+            const eden = objects.eden;
+            const city = objects.city;
+            const character = objects.character;
+            
+
+            bridges.left.position.y = 3;
+            bridges.right.position.y = 3;
+            bridges.gap.visible = true;
+            cross.horizontal.visible = false;
+            cross.vertical.visible = false;
+            
+
+            if (newStage === 1) {
+                bridges.left.position.x = -5;
+                bridges.right.position.x = 5;
+                bridges.gap.visible = false;
+                
+
+                scene.background = new THREE.Color(0x87ceeb);
+                objects.sky.material.color.set(0x87ceeb);
+                
+
+                character.body.position.x = -15;
+                character.head.position.x = -15;
+            } 
+
+            else if (newStage === 2) {
+
+                bridges.left.position.x = -8;
+                bridges.right.position.x = 8;
+                bridges.gap.visible = true;
+
+                scene.background = new THREE.Color(0x2c3e50);
+                objects.sky.material.color.set(0x2c3e50);
+                
+                addRainEffect();
+
+                character.body.position.x = -8;
+                character.head.position.x = -8;
+            }
+
+            else if (newStage === 3) {
+
+                bridges.left.position.x = -10;
+                bridges.right.position.x = 10;
+                
+                // 增加障礙物
+                addObstacles();
+                
+                character.body.position.x = -12;
+                character.head.position.x = -12;
+            }
+
+            else if (newStage === 4) {
+
+                bridges.gap.visible = false;
+                cross.horizontal.visible = true;
+                cross.vertical.visible = true;
+                
+
+                addLightBeam();
+
+                character.body.position.x = -5;
+                character.head.position.x = -5;
+            }
+
+            else if (newStage === 5) {
+
+                bridges.left.position.x = -5;
+                bridges.right.position.x = 5;
+                bridges.gap.visible = false;
+
+                cross.horizontal.material.emissive = new THREE.Color(0xffffcc);
+                cross.horizontal.material.emissiveIntensity = 1;
+                cross.vertical.material.emissive = new THREE.Color(0xffffcc);
+                cross.vertical.material.emissiveIntensity = 1;
+                
+                scene.background = new THREE.Color(0x98d8e8);
+                objects.sky.material.color.set(0x98d8e8);
+                
+                character.body.position.x = 15;
+                character.head.position.x = 15;
+
+                addRainbow();
+            }
+            
+            stage = newStage;
+            animationActive = false;
+        }
+        
+
+        function addRainEffect() {
+
+            scene.traverse(obj => {
+                if (obj.material && obj.material.emissive) {
+                    obj.material.emissive.set(0x333333);
+                }
+            });
+        }
+        
+
+        function addObstacles() {
+
+        }
+
+        function addLightBeam() {
+
+            objects.cross.horizontal.material.emissive = new THREE.Color(0xffffcc);
+            objects.cross.horizontal.material.emissiveIntensity = 2;
+            objects.cross.vertical.material.emissive = new THREE.Color(0xffffcc);
+            objects.cross.vertical.material.emissiveIntensity = 2;
+        }
+        
+
+        function addRainbow() {
+
+        }
+
+        function addEventListeners() {
+
+            document.getElementById('prev-btn').addEventListener('click', () => {
+                if (stage > 1) updateStage(stage - 1);
+            });
+            
+            document.getElementById('next-btn').addEventListener('click', () => {
+                if (stage < 5) updateStage(stage + 1);
+            });
+            
+
+            document.querySelectorAll('.indicator').forEach(el => {
+                el.addEventListener('click', () => {
+                    const targetStage = parseInt(el.getAttribute('data-stage'));
+                    if (targetStage !== stage) updateStage(targetStage);
+                });
+            });
+            
+
+            document.getElementById('accessibility-btn').addEventListener('click', toggleLargeMode);
+            
+
+            document.getElementById('reset-btn').addEventListener('click', () => {
+                updateStage(1);
+
+                const overlay = document.querySelector('.transition-overlay');
+                overlay.classList.add('active');
+                setTimeout(() => {
+                    overlay.classList.remove('active');
+                }, 1200);
+            });
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            renderer.domElement.addEventListener('click', (event) => {
+
+                if (stage === 4) {
+                    showBridgeMessage();
+                }
+            });
+        }
+        
+        function toggleLargeMode() {
+            isLargeMode = !isLargeMode;
+            
+            document.body.classList.toggle('large-mode', isLargeMode);
+            document.getElementById('info-panel').classList.toggle('info-panel-large', isLargeMode);
+            document.getElementById('stage-title').classList.toggle('title-large', isLargeMode);
+            document.getElementById('stage-description').classList.toggle('desc-large', isLargeMode);
+            document.getElementById('logo').classList.toggle('logo-large', isLargeMode);
+            document.getElementById('footer-note').classList.toggle('footer-large', isLargeMode);
+            
+            const btn = document.getElementById('accessibility-btn');
+            btn.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2a4 4 0 0 1 4 4v1a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V6a4 4 0 0 1 4-4h4z"></path>
+                    <circle cx="12" cy="16" r="3"></circle>
+                    <path d="M12 19v3"></path>
+                </svg>
+                ${isLargeMode ? '標準模式' : '大字模式'}
+            `;
+            
+            document.querySelectorAll('.btn').forEach(btn => {
+                btn.classList.toggle('btn-large', isLargeMode);
+            });
+        }
+        
+        // 顯示橋樑信息
+        function showBridgeMessage() {
+            document.getElementById('stage-description').textContent = 
+                "耶穌說：「我就是道路、真理、生命；若不藉著我，沒有人能到父那裡去。」（約翰福音 14:6）";
+            
+            setTimeout(() => {
+                document.getElementById('stage-description').textContent = gospelContent[3].description;
+            }, 3000);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (controls) controls.update();
+
+            if (stage === 5 && objects.character) {
+                const char = objects.character;
+                char.body.rotation.y += 0.01;
+                char.head.rotation.y += 0.01;
+            }
+
+            if (stage === 5 && objects.eden && objects.eden.light) {
+                objects.eden.light.rotation.y += 0.01;
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        window.onload = init;
+    </script>
+</body>
+</html>
