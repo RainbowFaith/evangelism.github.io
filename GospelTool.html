@@ -607,7 +607,7 @@
                     // 左側大地往左移動裂開深淵
                     tl.to(leftLandGroup.position, { x: -16, duration: 2, ease: "power2.inOut" }, 0);
                     tl.to(man.position, { x: -7, duration: 2, ease: "power2.inOut" }, 0);
-                      .to(camera.position, {x: -3, y: 12, z: 35, duration: 2, ease: "power2.inOut"}, 0); // 鏡頭跟隨
+                    tl.to(camera.position, {x: -3, y: 12, z: 35, duration: 2, ease: "power2.inOut"}, 0); // 鏡頭跟隨
                     
                     // 環境變暗
                     tl.to(scene.background, { r: new THREE.Color(colors.skyDark).r, g: new THREE.Color(colors.skyDark).g, b: new THREE.Color(colors.skyDark).b, duration: 2 }, 0);
