@@ -96,24 +96,24 @@
         // ==========================================
         const storyData = [
             {
-                title: "起初，神創造天地。 — 創世記 1:1",
-                content: "起初，神創造了完美的世界。那時，人與神親密無間，充滿喜樂平安。<br><br>人生活在天父的光明與愛中，沒有任何隔閡。"
+                title: "創世記 1:1<br>起初，神創造天地。",
+                content: "起初，神創造了完美的世界。那時，人與神親密無間，充滿喜樂平安。<br>人生活在天父的光明與愛中，沒有任何隔閡。"
             },
             {
-                title: "因為世人都犯了罪，虧缺了神的榮耀。 — 羅馬書 3:23",
-                content: "然而，人犯罪背叛了神。人因為有罪的緣故，與聖潔的神分隔。<br><br>失去神同在的人類世界變得充滿了邪惡、憤怒、紛爭、憂慮與悲哀⋯"
+                title: "羅馬書 3:23<br>因為世人都犯了罪，虧缺了神的榮耀。",
+                content: "然而，人犯罪背叛了神。人因為有罪的緣故，與聖潔的神分隔。<br>失去神同在的人類世界變得充滿了邪惡、憤怒、紛爭、憂慮與悲哀⋯"
             },
             {
-                title: "因為罪的工價乃是死⋯ — 羅馬書 6:23",
-                content: "人類與聖潔的神被罪惡與死亡的深淵隔絕；<br><br>即使用盡各種方法（例如善行、知識、智慧、道德）想跨越這道鴻溝回到美善的天父那裡，卻總是徒勞無功。<br><br>世界充滿了孤單、傷痛、絕望、無助⋯"
+                title: "羅馬書 6:23<br>因為罪的工價乃是死⋯",
+                content: "人類與聖潔的神被罪惡與死亡的深淵隔絕；<br>即使用盡各種方法（例如善行、知識、智慧、道德）想跨越這道鴻溝回到美善的天父那裡，卻總是徒勞無功。<br>世界充滿了孤單、傷痛、絕望、無助⋯"
             },
             {
-                title: "神愛世人，甚至將他的獨生子賜給他們，叫一切信他的，不至滅亡，反得永生。 — 約翰福音 3:16",
-                content: "但天父依然愛我們！神差遣祂的獨生子耶穌基督來到世上拯救我們。<br><br>無罪的耶穌為了救贖我們，親自承擔了我們的罪，被釘死在十字架上，並在第三天復活了！<br><br>救主耶穌成為了世人重新回到天父的唯一道路！"
+                title: "約翰福音 3:16<br>神愛世人，甚至將他的獨生子賜給他們，叫一切信他的，不至滅亡，反得永生。",
+                content: "但天父依然愛我們！神差遣祂的獨生子耶穌基督來到世上拯救我們。<br>無罪的耶穌為了救贖我們，親自承擔了我們的罪，被釘死在十字架上，並在第三天復活了！<br>救主耶穌成為了世人重新回到天父的唯一道路！"
             },
             {
-                title: "耶穌：「我來了，是要叫羊(或譯: 人)得生命，並且得的更豐盛。」 — 約翰福音 10:10b",
-                content: "耶穌基督來到世上的目的，就是要讓人得著真正的生命！<br><br>只要您願意相信並接受耶穌作您的救主，就能藉著這唯一的道路，跨越罪惡與死亡的深淵，重新回到天父那裡❤️"
+                title: "約翰福音 10:10b<br>耶穌：「我來了，是要叫人得生命，並且得的更豐盛。」",
+                content: "耶穌基督來到世上的目的，就是要讓人得著真正的生命！<br>只要您願意相信並接受耶穌作您的救主，就能藉著這唯一的道路，跨越罪惡與死亡的深淵，重新回到天父那裡❤️"
             }
         ];
 
@@ -597,13 +597,13 @@
 
             switch(stageIndex) {
                 case 0: 
-                    // 階段 1：起初，神創造天地。 — 創世記 1:1
+                    // 階段 1：創世記 1:1<br>起初，神創造天地。
                     resetPositions();
                     gsap.to(camera.position, {x: 0, y: 12, z: 35, duration: 2, ease: "power2.inOut"});
                     break;
 
                 case 1: 
-                    // 階段 2：因為世人都犯了罪，虧缺了神的榮耀。 — 羅馬書 3:23
+                    // 階段 2：羅馬書 3:23<br>因為世人都犯了罪，虧缺了神的榮耀。
                     // 左側大地往左移動裂開深淵
                     tl.to(leftLandGroup.position, { x: -16, duration: 2, ease: "power2.inOut" }, 0);
                     tl.to(man.position, { x: -7, duration: 2, ease: "power2.inOut" }, 0);
@@ -638,7 +638,7 @@
                     break;
 
                 case 2: 
-                    // 階段 3：因為罪的工價乃是死⋯ — 羅馬書 6:23
+                    // 階段 3：羅馬書 6:23<br>因為罪的工價乃是死⋯
                     // 確保狀態延續 (防呆跳轉)
                     if (leftLandGroup.position.x > -15) {
                         leftLandGroup.position.x = -16;
@@ -661,7 +661,7 @@
                     break;
 
                 case 3: 
-                    // 階段 4：神愛世人，甚至將他的獨生子賜給他們，叫一切信他的，不至滅亡，反得永生。 — 約翰福音 3:16
+                    // 階段 4：約翰福音 3:16<br>神愛世人，甚至將他的獨生子賜給他們，叫一切信他的，不至滅亡，反得永生。
                     if (leftLandGroup.position.x > -15) leftLandGroup.position.x = -16;
                     
                     tl.to(camera.position, {x: -3, y: 10, z: 30, duration: 1.5, ease: "power2.inOut"}, 0);
@@ -711,7 +711,7 @@
                     break;
 
                 case 4: 
-                    // 階段 5：耶穌：「我來了，是要叫人得生命，並且得的更豐盛。」 — 約翰福音 10:10b
+                    // 階段 5：約翰福音 10:10b<br>耶穌：「我來了，是要叫人得生命，並且得的更豐盛。」
                     // 確保橋樑與耶穌位置正確
                     cross.visible = true;
                     cross.position.set(-6, 0, 2);
@@ -766,8 +766,7 @@
             uiContent.style.opacity = 0;
             
             setTimeout(() => {
-                uiTitle.textContent = storyData[currentStage].title;
-                // 改為 innerHTML 以便解析文本中的 <br> 換行符號
+                uiTitle.innerHTML = storyData[currentStage].title;
                 uiContent.innerHTML = storyData[currentStage].content;
                 uiTitle.style.opacity = 1;
                 uiContent.style.opacity = 1;
@@ -819,17 +818,16 @@
             isLargeText = !isLargeText;
             const btn = document.getElementById('btn-text-size');
             if (isLargeText) {
-                // 手機版字體略微縮小(text-2xl & text-lg)，確保不遮擋畫面
-                uiTitle.classList.replace('text-xl', 'text-2xl');
+                uiTitle.classList.replace('text-xl', 'text-3xl');
                 uiTitle.classList.replace('md:text-2xl', 'md:text-4xl');
-                uiContent.classList.replace('text-base', 'text-lg');
-                uiContent.classList.replace('md:text-lg', 'md:text-2xl');
+                uiContent.classList.replace('text-base', 'text-2xl');
+                uiContent.classList.replace('md:text-lg', 'md:text-3xl');
                 btn.classList.add('bg-white/40', 'text-yellow-300');
             } else {
-                uiTitle.classList.replace('text-2xl', 'text-xl');
+                uiTitle.classList.replace('text-3xl', 'text-xl');
                 uiTitle.classList.replace('md:text-4xl', 'md:text-2xl');
-                uiContent.classList.replace('text-lg', 'text-base');
-                uiContent.classList.replace('md:text-2xl', 'md:text-lg');
+                uiContent.classList.replace('text-2xl', 'text-base');
+                uiContent.classList.replace('md:text-3xl', 'md:text-lg');
                 btn.classList.remove('bg-white/40', 'text-yellow-300');
             }
         });
