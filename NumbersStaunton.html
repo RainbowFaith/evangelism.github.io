@@ -1,379 +1,666 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, Play, Dices, AlertTriangle, HelpCircle, Map, Star, Tent, CheckCircle2, XCircle } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>曠野求生：民數記桌遊</title>
+  <!-- 引入 Tailwind CSS (負責排版與美化) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 React 與 ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- 引入 Babel (讓瀏覽器能直接讀懂 React JSX 語法) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <!-- 遊戲將會顯示在這個 div 裡面 -->
+  <div id="root"></div>
 
-// --- 遊戲資料庫 (擴充版題庫與事件) ---
+  <!-- 遊戲邏輯與介面 (React 程式碼) -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
 
-const TRIBES = ["流便支派", "西緬支派", "猶大支派", "以薩迦支派", "西布倫支派", "便雅憫支派", "但支派", "拿弗他利支派", "迦得支派", "亞設支派", "以法蓮支派", "瑪拿西支派"];
+    // =========================================================================
+    // ↓↓↓↓↓ 自訂編輯區：您可以在這裡自由修改遊戲中的文字、問題與答案 ↓↓↓↓↓
+    // 注意事項：
+    // 1. 請只修改雙引號 "" 裡面的中文字。
+    // 2. 請不要刪除大括號 {}、中括號 []、逗號 , 或雙引號 ""，否則網頁會壞掉。
+    // 3. 您可以複製其中一行並貼上，來新增更多的問題或事件。
+    // =========================================================================
 
-const PRE_SPIN_QUESTIONS = [
-  { q: "《民數記》主要記載以色列人在哪裡漂流的歷史？", a: "曠野" },
-  { q: "神吩咐摩西打發多少個探子去窺探迦南地？", a: "12個" },
-  { q: "12個探子中，哪兩個人呼籲百姓要有信心上去得那地？", a: "迦勒和約書亞" },
-  { q: "以色列人在曠野中抱怨沒有肉吃，神降下了什麼給他們？", a: "鵪鶉" },
-  { q: "亞倫的杖發生了什麼神蹟，證明神揀選了他？", a: "發芽、開花、結了熟杏" },
-  { q: "百姓被火蛇咬傷後，摩西舉起什麼，讓望見的人得醫治？", a: "銅蛇" },
-  { q: "神透過什麼動物開口說話，攔阻了先知巴蘭的錯謬？", a: "驢子" },
-  { q: "起初出埃及的二十歲以外的男丁，除了誰以外，都必死在曠野？", a: "迦勒與約書亞" },
-  { q: "摩西因為在尋的曠野做錯了什麼事，導致不能進入迦南地？", a: "擊打磐石兩下" },
-  { q: "引導以色列人前行的，白天和黑夜分別是什麼？", a: "白天雲柱，黑夜火柱" },
-  { q: "耶和華在西奈曠野吩咐摩西數點多少歲以上能出去打仗的男丁？", a: "20歲" },
-  { q: "哪一個支派沒有被數點在軍隊中，而是被派去管理會幕？", a: "利未支派" },
-  { q: "拿細耳人許願期間，有什麼特別的禁忌？(舉出一樣)", a: "不喝酒 / 不剃頭 / 不摸死屍" },
-  { q: "以色列人起行時，走在最前面帶領的是什麼？", a: "約櫃" },
-  { q: "摩西的哥哥和姊姊分別叫什麼名字？", a: "亞倫、米利暗" }
-];
+    // 1. 十二支派名稱
+    const TRIBES = [
+      "流便支派", "西緬支派", "猶大支派", "以薩迦支派", "西布倫支派", "便雅憫支派", 
+      "但支派", "拿弗他利支派", "迦得支派", "亞設支派", "以法蓮支派", "瑪拿西支派"
+    ];
 
-const ORACLE_CARDS = [
-  { q: "【神諭】耶和華吩咐摩西數點以色列人，主要目的是為了什麼？", a: "計算能出去打仗的男丁", reward: 2, penalty: -1 },
-  { q: "【神諭】利未人主要被分別出來負責什麼工作？", a: "辦理會幕的事 ", reward: 2, penalty: 0 },
-  { q: "【神諭】可拉、大坍、亞比蘭因為什麼罪被神懲罰 (地吞滅他們)？", a: "挑戰摩西和亞倫的領袖權柄", reward: 3, penalty: -2 },
-  { q: "【神諭】巴勒王聘請巴蘭去咒詛以色列人，結果巴蘭口中說出了什麼？", a: "祝福的話", reward: 2, penalty: -1 },
-  { q: "【神諭】民數記 6:24 中祭司的祝福：「願耶和華賜福給你，____你。」", a: "保護", reward: 2, penalty: 0 },
-  { q: "【神諭】神吩咐用銀子做兩枝號，主要用途是什麼？", a: "招聚會眾或起行", reward: 2, penalty: -1 },
-  { q: "【神諭】「拿細耳」這個詞的意思是什麼？", a: "「分別出來」或「歸主為聖」", reward: 3, penalty: 0 },
-  { q: "【神諭】在尋的曠野，加低斯，哪位重要的女領袖過世了？", a: "米利暗", reward: 2, penalty: -1 },
-  { q: "【神諭】西羅非哈的五個女兒來到摩西面前，要求什麼？", a: "繼承父親的產業 (土地)", reward: 3, penalty: -1 }
-];
+    // 2. 轉盤挑戰 (每次擲骰前要回答的問題)
+    // q: 問題內容, a: 參考答案
+    const PRE_SPIN_QUESTIONS = [
+      { q: "《民數記》主要記載以色列人在哪裡漂流的歷史？", a: "曠野" },
+      { q: "神吩咐摩西打發多少個探子去窺探迦南地？", a: "12個" },
+      { q: "12個探子中，哪兩個人呼籲百姓要有信心上去得那地？", a: "迦勒和約書亞" },
+      { q: "以色列人在曠野中抱怨沒有肉吃，神降下了什麼給他們？", a: "鵪鶉" },
+      { q: "亞倫的杖發生了什麼神蹟，證明神揀選了他？", a: "發芽、開花、結了熟杏" },
+      { q: "百姓被火蛇咬傷後，摩西舉起什麼，讓望見的人得醫治？", a: "銅蛇" },
+      { q: "神透過什麼動物開口說話，攔阻了先知巴蘭的錯謬？", a: "驢子" },
+      { q: "起初出埃及的二十歲以外的男丁，除了誰以外，都必死在曠野？", a: "迦勒與約書亞" },
+      { q: "摩西因為在尋的曠野做錯了什麼事，導致不能進入迦南地？", a: "擊打磐石兩下 (未尊神為聖)" },
+      { q: "引導以色列人前行的，白天和黑夜分別是什麼？", a: "白天雲柱，黑夜火柱" },
+      { q: "耶和華在西奈曠野吩咐摩西數點多少歲以上能出去打仗的男丁？", a: "20歲" },
+      { q: "哪一個支派沒有被數點在軍隊中，而是被派去管理會幕？", a: "利未支派" },
+      { q: "拿細耳人許願期間，有什麼特別的禁忌？(舉出一樣)", a: "不喝酒 / 不剃頭 / 不摸死屍" },
+      { q: "以色列人起行時，走在最前面帶領的是什麼？", a: "約櫃" },
+      { q: "摩西的哥哥和姊姊分別叫什麼名字？", a: "亞倫、米利暗" }
+    ];
 
-const CHANCE_CARDS = [
-  { text: "【機會】你們在曠野發現了一片綠洲，神賜下甘甜的泉水。全隊士氣大振！", effect: 3, type: "reward" },
-  { text: "【機會】天氣炎熱，隊伍中有幾個人開始發怨言，惹動了神的怒氣降下烈火燒至營的邊界，稍微耽誤了行程。", effect: -2, type: "penalty" },
-  { text: "【機會】你們順服神雲柱的引導，平平安安地度過了這幾天。平安無事。", effect: 0, type: "peace" },
-  { text: "【機會】你們在早晨勤奮地收集了全家的嗎哪，體力充沛，加快了腳步！", effect: 4, type: "reward" },
-  { text: "【機會】路上遇到了亞瑪力人的騷擾，隊伍需要重新整頓。", effect: -2, type: "penalty" },
-  { text: "【機會】遇到了友善的米甸人 何巴，為你們指引了一段捷徑。", effect: 3, type: "reward" },
-  { text: "【機會】沙塵暴來襲，隊伍不得不暫停前進並尋找掩護。", effect: -1, type: "penalty" },
-  { text: "【機會】在曠野中迷失了方向，繞了一點遠路。", effect: -2, type: "penalty" },
-  { text: "【機會】神賜下豐盛的鵪鶉肉，但有人貪心吃太多生病了。", effect: -1, type: "penalty" },
-  { text: "【機會】眾人同心合意敬拜神，神的榮光顯現在會幕中，大得激勵！", effect: 2, type: "reward" }
-];
+    // 3. 神諭卡 (抽中時回答正確可前進，答錯會後退)
+    // q: 問題, a: 答案, reward: 答對前進步數, penalty: 答錯後退步數(需為負數或0)
+    const ORACLE_CARDS = [
+      { q: "【神諭】耶和華吩咐摩西數點以色列人，主要目的是為了什麼？", a: "計算能出去打仗的男丁", reward: 2, penalty: -1 },
+      { q: "【神諭】利未人主要被分別出來負責什麼工作？", a: "辦理會幕的事 (事奉神)", reward: 2, penalty: 0 },
+      { q: "【神諭】可拉、大坍、亞比蘭因為什麼罪被神懲罰 (地吞滅他們)？", a: "挑戰摩西和亞倫的領袖權柄 (叛逆)", reward: 3, penalty: -2 },
+      { q: "【神諭】巴勒王聘請巴蘭去咒詛以色列人，結果巴蘭口中說出了什麼？", a: "祝福的話", reward: 2, penalty: -1 },
+      { q: "【神諭】民數記 6:24 中祭司的祝福：「願耶和華賜福給你，____你。」", a: "保護", reward: 2, penalty: 0 },
+      { q: "【神諭】神吩咐用銀子做兩枝號，主要用途是什麼？", a: "招聚會眾或起行", reward: 2, penalty: -1 },
+      { q: "【神諭】「拿細耳」這個詞的意思是什麼？", a: "歸主為聖 (分別出來)", reward: 3, penalty: 0 },
+      { q: "【神諭】在尋的曠野，加低斯，哪位重要的女領袖過世了？", a: "米利暗", reward: 2, penalty: -1 },
+      { q: "【神諭】西羅非哈的五個女兒來到摩西面前，要求什麼？", a: "繼承父親的產業 (土地)", reward: 3, penalty: -1 }
+    ];
 
-const SPECIAL_EVENTS = [
-  {
-    title: "重大事件：十二探子報惡信",
-    desc: "十個探子報惡信讓全會眾大起怨言，只有迦勒和約書亞有信心。(民數記13-14章)",
-    discussion: "【討論】在面對巨大困難時，我們常常像十個探子一樣看環境，還是像迦勒一樣看神的應許？請分享一個你依靠神勝過恐懼的經歷。"
-  },
-  {
-    title: "重大事件：可拉一黨的叛變",
-    desc: "可拉帶領會眾挑戰摩西和亞倫的屬靈權柄，結果地開了口吞滅了他們。(民數記16章)",
-    discussion: "【討論】神設立領袖來牧養群羊。這件事教導我們現今在教會中，應當如何正確看待並順服屬靈領袖？"
-  },
-  {
-    title: "重大事件：擊打磐石出水",
-    desc: "百姓因無水爭鬧，神吩咐摩西「吩咐」磐石出水，摩西卻動怒「擊打」磐石兩下。(民數記20章)",
-    discussion: "【討論】即使是偉大的領袖摩西，也因一時血氣未尊神為聖。我們在服事或生氣時，如何避免血氣行事？"
-  },
-  {
-    title: "重大事件：仰望銅蛇",
-    desc: "百姓發怨言被火蛇咬，神命摩西造銅蛇，凡仰望的就得存活。(民數記21章)",
-    discussion: "【討論】耶穌在約翰福音提到「摩西在曠野怎樣舉蛇，人子也必照樣被舉起來」。這預表了什麼救恩信息？"
-  },
-  {
-    title: "重大事件：米利暗長大痲瘋",
-    desc: "亞倫和米利暗因為摩西娶了古實女子而毀謗他，米利暗因此長了大痲瘋。(民數記12章)",
-    discussion: "【討論】嫉妒和毀謗會在群體中造成極大的破壞。我們該如何看待身邊同工或領袖的軟弱，並學習用愛心說誠實話？"
-  },
-  {
-    title: "重大事件：巴蘭的驢子開口",
-    desc: "先知巴蘭貪愛錢財，想去咒詛以色列人，卻被自己的驢子開口責備並看見了耶和華的使者。(民數記22章)",
-    discussion: "【討論】有時候神會透過我們意想不到的人事物（甚至環境）來對我們說話。分享一次你被神「攔阻」或「提醒」的經歷。"
-  },
-  {
-    title: "重大事件：巴力毗珥的誘惑",
-    desc: "以色列人與摩押女子行淫，並跪拜她們的神巴力毗珥，惹動神的怒氣，導致瘟疫。(民數記25章)",
-    discussion: "【討論】現今的世界充滿了誘惑。有哪些「巴力」（偶像或世俗價值觀）容易讓我們偏離對神的專一？"
-  },
-  {
-    title: "重大事件：西羅非哈的女兒求產業",
-    desc: "西羅非哈沒有兒子，他的五個女兒勇敢上前為自己爭取應許之地的產業，神也認可了她們的請求。(民數記27章)",
-    discussion: "【討論】在傳統與規則面前，她們展現了對神應許的信心與渴望。這如何激勵我們在禱告中勇敢向神祈求？"
-  }
-];
+    // 4. 機會卡 (直接發生的事件)
+    // text: 顯示文字, effect: 影響步數(正數前進，負數後退，0為沒事)
+    const CHANCE_CARDS = [
+      { text: "【機會】你們在曠野發現了一片綠洲，神賜下甘甜的泉水。全隊士氣大振！", effect: 3 },
+      { text: "【機會】天氣炎熱，隊伍中有幾個人開始發怨言，惹動了神的怒氣，稍微耽誤了行程。", effect: -2 },
+      { text: "【機會】你們順服神雲柱的引導，平平安安地度過了這幾天。平安無事。", effect: 0 },
+      { text: "【機會】你們在早晨勤奮地收集了雙倍的嗎哪，體力充沛，加快了腳步！", effect: 4 },
+      { text: "【機會】路上遇到了亞瑪力人的騷擾，隊伍需要重新整頓。", effect: -2 },
+      { text: "【機會】遇到了友善的米甸人（何巴），為你們指引了一段捷徑。", effect: 3 },
+      { text: "【機會】沙塵暴來襲，隊伍不得不暫停前進並尋找掩護。", effect: -1 },
+      { text: "【機會】在曠野中迷失了方向，繞了一點遠路。", effect: -2 },
+      { text: "【機會】神賜下豐盛的鵪鶉肉，但有人貪心吃太多生病了。", effect: -1 },
+      { text: "【機會】眾人同心合意敬拜神，神的榮光顯現在會幕中，大得激勵！", effect: 2 }
+    ];
 
-// --- 輔助函數 ---
-const shuffle = (array) => [...array].sort(() => Math.random() - 0.5);
+    // 5. 重大事件 (踩中時全班共同討論)
+    // title: 事件標題, desc: 事件描述, discussion: 討論題目
+    const SPECIAL_EVENTS = [
+      {
+        title: "重大事件：十二探子報惡信",
+        desc: "十個探子報惡信讓全會眾大起怨言，只有迦勒和約書亞有信心。(民數記13-14章)",
+        discussion: "【全班討論】在面對巨大困難時，我們常常像十個探子一樣看環境，還是像迦勒一樣看神的應許？請分享一個你依靠神勝過恐懼的經歷。"
+      },
+      {
+        title: "重大事件：可拉一黨的叛變",
+        desc: "可拉帶領會眾挑戰摩西和亞倫的屬靈權柄，結果地開了口吞滅了他們。(民數記16章)",
+        discussion: "【全班討論】神設立領袖來牧養群羊。這件事教導我們現今在教會中，應當如何正確看待並順服屬靈領袖？"
+      },
+      {
+        title: "重大事件：擊打磐石出水",
+        desc: "百姓因無水爭鬧，神吩咐摩西「吩咐」磐石出水，摩西卻動怒「擊打」磐石兩下。(民數記20章)",
+        discussion: "【全班討論】即使是偉大的領袖摩西，也因一時血氣未尊神為聖。我們在服事或生氣時，如何避免血氣行事？"
+      },
+      {
+        title: "重大事件：仰望銅蛇",
+        desc: "百姓發怨言被火蛇咬，神命摩西造銅蛇，凡仰望的就得存活。(民數記21章)",
+        discussion: "【全班討論】耶穌在約翰福音提到「摩西在曠野怎樣舉蛇，人子也必照樣被舉起來」。這預表了什麼救恩信息？"
+      },
+      {
+        title: "重大事件：米利暗長大痲瘋",
+        desc: "亞倫和米利暗因為摩西娶了古實女子而毀謗他，米利暗因此長了大痲瘋。(民數記12章)",
+        discussion: "【全班討論】嫉妒和毀謗會在群體中造成極大的破壞。我們該如何看待身邊同工或領袖的軟弱，並學習用愛心說誠實話？"
+      },
+      {
+        title: "重大事件：巴蘭的驢子開口",
+        desc: "先知巴蘭貪愛錢財，想去咒詛以色列人，卻被自己的驢子開口責備並看見了耶和華的使者。(民數記22章)",
+        discussion: "【全班討論】有時候神會透過我們意想不到的人事物（甚至環境）來對我們說話。分享一次你被神「攔阻」或「提醒」的經歷。"
+      },
+      {
+        title: "重大事件：巴力毗珥的誘惑",
+        desc: "以色列人與摩押女子行淫，並跪拜她們的神巴力毗珥，惹動神的怒氣，導致瘟疫。(民數記25章)",
+        discussion: "【全班討論】現今的世界充滿了誘惑。有哪些「巴力」（偶像或世俗價值觀）容易讓我們偏離對神的專一？"
+      },
+      {
+        title: "重大事件：西羅非哈的女兒求產業",
+        desc: "西羅非哈沒有兒子，他的五個女兒勇敢上前為自己爭取應許之地的產業，神也認可了她們的請求。(民數記27章)",
+        discussion: "【全班討論】在傳統與規則面前，她們展現了對神應許的信心與渴望。這如何激勵我們在禱告中勇敢向神祈求？"
+      }
+    ];
 
-export default function App() {
-  const [gameState, setGameState] = useState('setup');
-  const [teamsCount, setTeamsCount] = useState(2);
-  const [teams, setTeams] = useState([]);
-  const [board, setBoard] = useState([]);
-  const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false); // 控制是否顯示答案
-  
-  // Modal 狀態管理
-  const [modalState, setModalState] = useState({
-    isOpen: false,
-    type: '',
-    data: null
-  });
+    // =========================================================================
+    // ↑↑↑↑↑ 自訂編輯區結束。下方的程式碼為遊戲邏輯，請勿任意修改 ↑↑↑↑↑
+    // =========================================================================
 
-  const BOARD_SIZE = 100; // ★ 路徑為 100 格
+    // --- 圖示組件 ---
+    const Icon = ({ children, size=24, className="" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        {children}
+      </svg>
+    );
+    const SettingsIcon = (p) => <Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
+    const PlayIcon = (p) => <Icon {...p}><polygon points="5 3 19 12 5 21 5 3"/></Icon>;
+    const DicesIcon = (p) => <Icon {...p}><rect width="12" height="12" x="2" y="10" rx="2" ry="2"/><path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6"/><path d="M6 18h.01"/><path d="M10 14h.01"/><path d="M15 6h.01"/><path d="M18 9h.01"/></Icon>;
+    const AlertTriangleIcon = (p) => <Icon {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></Icon>;
+    const HelpCircleIcon = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></Icon>;
+    const MapIconSvg = (p) => <Icon {...p}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></Icon>;
+    const StarIcon = (p) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Icon>;
+    const TentIcon = (p) => <Icon {...p}><path d="M19 20 10 4"/><path d="m5 20 9-16"/><path d="M3 20h18"/><path d="m12 15-3 5"/><path d="m12 15 3 5"/></Icon>;
+    const CheckCircle2Icon = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></Icon>;
+    const XCircleIcon = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></Icon>;
 
-  // 初始化遊戲
-  const startGame = () => {
-    const selectedTribes = shuffle(TRIBES).slice(0, teamsCount);
-    const initialTeams = selectedTribes.map((tribe, index) => ({
-      id: index,
-      name: tribe,
-      position: 0,
-      waitTurns: 0,
-      color: ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-purple-500'][index]
-    }));
-    setTeams(initialTeams);
+    const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5);
 
-    // 生成 100 格地圖的分配
-    let tileTypes = [];
-    for(let i=0; i<8; i++) tileTypes.push('special');  // 8個重大事件
-    for(let i=0; i<6; i++) tileTypes.push('sabbath');  // 6個安息日
-    for(let i=0; i<12; i++) tileTypes.push('chance');  // 12個機會
-    for(let i=0; i<12; i++) tileTypes.push('oracle');  // 12個神諭
-    while(tileTypes.length < BOARD_SIZE - 2) tileTypes.push('normal'); // 剩下的都是普通沙地 (約60格)
-    
-    tileTypes = shuffle(tileTypes);
-    const newBoard = ['start', ...tileTypes, 'end'];
-    setBoard(newBoard);
+    function App() {
+      const [gameState, setGameState] = useState('setup');
+      const [teamsCount, setTeamsCount] = useState(2);
+      const [teams, setTeams] = useState([]);
+      const [board, setBoard] = useState([]);
+      const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+      const [showAnswer, setShowAnswer] = useState(false);
+      
+      const [modalState, setModalState] = useState({
+        isOpen: false,
+        type: '',
+        data: null
+      });
 
-    setGameState('playing');
-    setCurrentTurnIndex(0);
-  };
+      const BOARD_SIZE = 100;
 
-  const currentTeam = teams[currentTurnIndex];
+      const startGame = () => {
+        const selectedTribes = shuffleArray(TRIBES).slice(0, teamsCount);
+        const initialTeams = selectedTribes.map((tribe, index) => ({
+          id: index,
+          name: tribe,
+          position: 0,
+          waitTurns: 0,
+          color: ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-purple-500'][index]
+        }));
+        setTeams(initialTeams);
 
-  // 處理下一回合
-  const nextTurn = (updatedTeams = teams) => {
-    let nextIndex = (currentTurnIndex + 1) % teamsCount;
-    if (updatedTeams[nextIndex].waitTurns > 0) {
-      setTimeout(() => {
+        let tileTypes = [];
+        for(let i=0; i<8; i++) tileTypes.push('special');  
+        for(let i=0; i<6; i++) tileTypes.push('sabbath');  
+        for(let i=0; i<12; i++) tileTypes.push('chance');  
+        for(let i=0; i<12; i++) tileTypes.push('oracle');  
+        while(tileTypes.length < BOARD_SIZE - 2) tileTypes.push('normal'); 
+        
+        tileTypes = shuffleArray(tileTypes);
+        const newBoard = ['start', ...tileTypes, 'end'];
+        setBoard(newBoard);
+
+        setGameState('playing');
+        setCurrentTurnIndex(0);
+      };
+
+      const currentTeam = teams[currentTurnIndex];
+
+      const nextTurn = (updatedTeams = teams) => {
+        let nextIndex = (currentTurnIndex + 1) % teamsCount;
+        if (updatedTeams[nextIndex].waitTurns > 0) {
+          setTimeout(() => {
+            setModalState({
+              isOpen: true,
+              type: 'sabbath-alert',
+              data: { team: updatedTeams[nextIndex] }
+            });
+          }, 500);
+        }
+        setCurrentTurnIndex(nextIndex);
+        setTeams(updatedTeams);
+      };
+
+      const handleSabbathAcknowledge = () => {
+        const updatedTeams = [...teams];
+        updatedTeams[currentTurnIndex].waitTurns -= 1;
+        setModalState({ isOpen: false, type: '', data: null });
+        nextTurn(updatedTeams);
+      };
+
+      const requestSpin = () => {
+        const question = shuffleArray(PRE_SPIN_QUESTIONS)[0];
+        setShowAnswer(false);
+        setModalState({ isOpen: true, type: 'pre-spin', data: { question } });
+      };
+
+      const executeSpin = (isCorrect) => {
+        if (!isCorrect) {
+          setModalState({
+            isOpen: true,
+            type: 'spin-result',
+            data: { message: `很可惜，答錯了！${currentTeam.name} 留在原地。`, steps: 0 }
+          });
+          return;
+        }
+
+        const steps = Math.floor(Math.random() * 6) + 1;
+        let newPosition = currentTeam.position + steps;
+        if (newPosition >= BOARD_SIZE - 1) {
+          newPosition = BOARD_SIZE - 1;
+        }
+
+        const updatedTeams = [...teams];
+        updatedTeams[currentTurnIndex].position = newPosition;
+        setTeams(updatedTeams);
+
         setModalState({
           isOpen: true,
-          type: 'sabbath-alert',
-          data: { team: updatedTeams[nextIndex] }
+          type: 'spin-result',
+          data: { message: `答對了！擲出 ${steps} 步，前進到第 ${newPosition} 格！`, steps, newPosition }
         });
-      }, 500);
-    }
-    setCurrentTurnIndex(nextIndex);
-    setTeams(updatedTeams);
-  };
+      };
 
-  const handleSabbathAcknowledge = () => {
-    const updatedTeams = [...teams];
-    updatedTeams[currentTurnIndex].waitTurns -= 1;
-    setModalState({ isOpen: false, type: '', data: null });
-    nextTurn(updatedTeams);
-  };
+      const resolveTile = () => {
+        const pos = currentTeam.position;
+        
+        if (pos === BOARD_SIZE - 1) {
+          setGameState('gameover');
+          setModalState({ isOpen: false, type: '', data: null });
+          return;
+        }
 
-  const requestSpin = () => {
-    const question = shuffle(PRE_SPIN_QUESTIONS)[0];
-    setShowAnswer(false); // 隱藏答案
-    setModalState({ isOpen: true, type: 'pre-spin', data: { question } });
-  };
+        const tileType = board[pos];
+        
+        if (tileType === 'normal') {
+          closeModal();
+          nextTurn();
+        } else if (tileType === 'chance') {
+          const card = shuffleArray(CHANCE_CARDS)[0];
+          setModalState({ isOpen: true, type: 'chance', data: { card } });
+        } else if (tileType === 'oracle') {
+          const card = shuffleArray(ORACLE_CARDS)[0];
+          setShowAnswer(false); 
+          setModalState({ isOpen: true, type: 'oracle', data: { card } });
+        } else if (tileType === 'sabbath') {
+          setModalState({ isOpen: true, type: 'sabbath-event', data: null });
+        } else if (tileType === 'special') {
+          const event = shuffleArray(SPECIAL_EVENTS)[0];
+          setModalState({ isOpen: true, type: 'special-discussion', data: { event } });
+        }
+      };
 
-  const executeSpin = (isCorrect) => {
-    if (!isCorrect) {
-      setModalState({
-        isOpen: true,
-        type: 'spin-result',
-        data: { message: `很可惜，答錯了！${currentTeam.name} 留在原地。`, steps: 0 }
-      });
-      return;
-    }
+      const applyTileEffect = (stepsChange, setWait = false) => {
+        const updatedTeams = [...teams];
+        let newPos = updatedTeams[currentTurnIndex].position + stepsChange;
+        
+        if (newPos < 0) newPos = 0;
+        if (newPos >= BOARD_SIZE - 1) {
+          newPos = BOARD_SIZE - 1;
+          setGameState('gameover');
+        }
+        
+        updatedTeams[currentTurnIndex].position = newPos;
+        if (setWait) updatedTeams[currentTurnIndex].waitTurns = 2;
+        
+        setTeams(updatedTeams);
+        closeModal();
+        if (newPos !== BOARD_SIZE - 1) nextTurn(updatedTeams);
+      };
 
-    const steps = Math.floor(Math.random() * 6) + 1;
-    let newPosition = currentTeam.position + steps;
-    if (newPosition >= BOARD_SIZE - 1) {
-      newPosition = BOARD_SIZE - 1;
-    }
+      const applySpecialEventAdjustments = (adjustments) => {
+        const updatedTeams = [...teams];
+        teams.forEach((team, idx) => {
+          let newPos = team.position + (adjustments[idx] || 0);
+          if (newPos < 0) newPos = 0;
+          if (newPos >= BOARD_SIZE - 1) {
+            newPos = BOARD_SIZE - 1;
+            setGameState('gameover');
+          }
+          updatedTeams[idx].position = newPos;
+        });
+        setTeams(updatedTeams);
+        closeModal();
+        if (gameState !== 'gameover') nextTurn(updatedTeams);
+      };
 
-    const updatedTeams = [...teams];
-    updatedTeams[currentTurnIndex].position = newPosition;
-    setTeams(updatedTeams);
+      const closeModal = () => {
+        setModalState({ isOpen: false, type: '', data: null });
+      };
 
-    setModalState({
-      isOpen: true,
-      type: 'spin-result',
-      data: { message: `答對了！擲出 ${steps} 步，前進到第 ${newPosition} 格！`, steps, newPosition }
-    });
-  };
-
-  const resolveTile = () => {
-    const pos = currentTeam.position;
-    
-    if (pos === BOARD_SIZE - 1) {
-      setGameState('gameover');
-      setModalState({ isOpen: false, type: '', data: null });
-      return;
-    }
-
-    const tileType = board[pos];
-    
-    if (tileType === 'normal') {
-      closeModal();
-      nextTurn();
-    } else if (tileType === 'chance') {
-      const card = shuffle(CHANCE_CARDS)[0];
-      setModalState({ isOpen: true, type: 'chance', data: { card } });
-    } else if (tileType === 'oracle') {
-      const card = shuffle(ORACLE_CARDS)[0];
-      setShowAnswer(false); // 隱藏解答
-      setModalState({ isOpen: true, type: 'oracle', data: { card } });
-    } else if (tileType === 'sabbath') {
-      setModalState({ isOpen: true, type: 'sabbath-event', data: null });
-    } else if (tileType === 'special') {
-      const event = shuffle(SPECIAL_EVENTS)[0];
-      setModalState({ isOpen: true, type: 'special-discussion', data: { event } });
-    }
-  };
-
-  const applyTileEffect = (stepsChange, setWait = false) => {
-    const updatedTeams = [...teams];
-    let newPos = updatedTeams[currentTurnIndex].position + stepsChange;
-    
-    if (newPos < 0) newPos = 0;
-    if (newPos >= BOARD_SIZE - 1) {
-      newPos = BOARD_SIZE - 1;
-      setGameState('gameover');
-    }
-    
-    updatedTeams[currentTurnIndex].position = newPos;
-    if (setWait) updatedTeams[currentTurnIndex].waitTurns = 2;
-    
-    setTeams(updatedTeams);
-    closeModal();
-    if (newPos !== BOARD_SIZE - 1) nextTurn(updatedTeams);
-  };
-
-  const applySpecialEventAdjustments = (adjustments) => {
-    const updatedTeams = [...teams];
-    teams.forEach((team, idx) => {
-      let newPos = team.position + (adjustments[idx] || 0);
-      if (newPos < 0) newPos = 0;
-      if (newPos >= BOARD_SIZE - 1) {
-        newPos = BOARD_SIZE - 1;
-        setGameState('gameover');
-      }
-      updatedTeams[idx].position = newPos;
-    });
-    setTeams(updatedTeams);
-    closeModal();
-    if (gameState !== 'gameover') nextTurn(updatedTeams);
-  };
-
-  const closeModal = () => {
-    setModalState({ isOpen: false, type: '', data: null });
-  };
-
-  // --- 繪製地圖邏輯 (100格，由左下至右上蛇行) ---
-  const getGridMap = () => {
-    const cols = 10;
-    const rows = Math.ceil(BOARD_SIZE / cols);
-    let grid = [];
-    
-    for (let i = 0; i < BOARD_SIZE; i++) {
-      // 算出從底部算起是第幾行 (0-based)
-      let rowFromBottom = Math.floor(i / cols);
-      // 網頁排版是從上到下，所以要反轉行數，讓第 0 行在最下面
-      let visualRow = rows - 1 - rowFromBottom; 
-      
-      let col = i % cols;
-      // S型蜿蜒：偶數行由左至右，奇數行由右至左 (從底部看)
-      let visualCol = rowFromBottom % 2 === 0 ? col : (cols - 1 - col);
-      
-      grid.push({ index: i, type: board[i], row: visualRow, col: visualCol });
-    }
-    
-    // 依照視覺位置排序，讓 CSS Grid 能夠正確由左上畫到右下
-    grid.sort((a, b) => {
-      if (a.row !== b.row) return a.row - b.row;
-      return a.col - b.col;
-    });
-    return grid;
-  };
-
-  const getTileColor = (type) => {
-    switch(type) {
-      case 'start': return 'bg-green-200 border-green-500';
-      case 'end': return 'bg-yellow-400 border-yellow-600 shadow-md';
-      case 'chance': return 'bg-orange-100 border-orange-400';
-      case 'oracle': return 'bg-blue-100 border-blue-400';
-      case 'special': return 'bg-red-100 border-red-500';
-      case 'sabbath': return 'bg-purple-100 border-purple-400';
-      default: return 'bg-yellow-50 border-yellow-300';
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-[#fdf8e7] text-gray-800 font-sans p-2 md:p-4 flex flex-col">
-      <header className="text-center mb-4 md:mb-6">
-        <h1 className="text-3xl md:text-5xl font-extrabold text-amber-900 tracking-wider flex justify-center items-center gap-2 md:gap-3">
-          <Tent className="text-amber-700 hidden md:block" size={36} />
-          《民數記》之曠野求生 <span className="text-lg md:text-2xl bg-amber-200 text-amber-900 px-3 py-1 rounded-full ml-2">荒漠挑戰版</span>
-          <Map className="text-amber-700 hidden md:block" size={36} />
-        </h1>
-      </header>
-
-      {gameState === 'setup' && (
-        <div className="max-w-xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-xl border-4 border-amber-200 text-center mt-10">
-          <h2 className="text-2xl font-bold mb-6 text-amber-900 flex justify-center items-center gap-2">
-            <Settings /> 遊戲設定
-          </h2>
-          <div className="mb-8">
-            <label className="block text-xl mb-4 font-semibold text-gray-700">選擇玩家隊伍數量：</label>
-            <div className="flex justify-center gap-3 md:gap-4">
-              {[2, 3, 4].map(num => (
-                <button
-                  key={num}
-                  onClick={() => setTeamsCount(num)}
-                  className={`px-5 py-3 md:px-6 md:py-3 rounded-full text-lg md:text-xl font-bold transition-all ${
-                    teamsCount === num 
-                    ? 'bg-amber-600 text-white shadow-md transform scale-105' 
-                    : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-                  }`}
-                >
-                  {num} 隊
-                </button>
-              ))}
-            </div>
-          </div>
-          <button onClick={startGame} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl text-2xl font-bold shadow-lg transition-colors flex justify-center items-center gap-2">
-            <Play /> 開始起營長征！ 
-          </button>
-        </div>
-      )}
-
-      {gameState === 'playing' && (
-        <div className="max-w-[1600px] w-full mx-auto flex flex-col lg:flex-row gap-4 md:gap-6 flex-grow">
+      const getGridMap = () => {
+        const cols = 10;
+        const rows = Math.ceil(BOARD_SIZE / cols);
+        let grid = [];
+        
+        for (let i = 0; i < BOARD_SIZE; i++) {
+          let rowFromBottom = Math.floor(i / cols);
+          let visualRow = rows - 1 - rowFromBottom; 
+          let col = i % cols;
+          let visualCol = rowFromBottom % 2 === 0 ? col : (cols - 1 - col);
           
-          {/* 左側資訊列 */}
-          <div className="w-full lg:w-64 flex flex-col gap-4 flex-shrink-0">
-            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-lg border-2 border-amber-200 text-center">
-              <h3 className="text-lg font-bold text-gray-700 mb-2">現在輪到</h3>
-              <div className="text-2xl md:text-3xl font-extrabold text-amber-700 mb-4 animate-pulse">
-                {currentTeam.name}
+          grid.push({ index: i, type: board[i], row: visualRow, col: visualCol });
+        }
+        
+        grid.sort((a, b) => {
+          if (a.row !== b.row) return a.row - b.row;
+          return a.col - b.col;
+        });
+        return grid;
+      };
+
+      const getTileColor = (type) => {
+        switch(type) {
+          case 'start': return 'bg-green-200 border-green-500';
+          case 'end': return 'bg-yellow-400 border-yellow-600 shadow-md';
+          case 'chance': return 'bg-orange-100 border-orange-400';
+          case 'oracle': return 'bg-blue-100 border-blue-400';
+          case 'special': return 'bg-red-100 border-red-500';
+          case 'sabbath': return 'bg-purple-100 border-purple-400';
+          default: return 'bg-yellow-50 border-yellow-300';
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-[#fdf8e7] text-gray-800 font-sans p-2 md:p-4 flex flex-col">
+          <header className="text-center mb-4 md:mb-6">
+            <h1 className="text-3xl md:text-5xl font-extrabold text-amber-900 tracking-wider flex justify-center items-center gap-2 md:gap-3">
+              <TentIcon className="text-amber-700 hidden md:block" size={36} />
+              曠野求生：民數記桌遊 <span className="text-lg md:text-2xl bg-amber-200 text-amber-900 px-3 py-1 rounded-full ml-2">100格挑戰版</span>
+              <MapIconSvg className="text-amber-700 hidden md:block" size={36} />
+            </h1>
+          </header>
+
+          {gameState === 'setup' && (
+            <div className="max-w-xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-xl border-4 border-amber-200 text-center mt-10">
+              <h2 className="text-2xl font-bold mb-6 text-amber-900 flex justify-center items-center gap-2">
+                <SettingsIcon /> 遊戲設定
+              </h2>
+              <div className="mb-8">
+                <label className="block text-xl mb-4 font-semibold text-gray-700">選擇玩家隊伍數量：</label>
+                <div className="flex justify-center gap-3 md:gap-4">
+                  {[2, 3, 4].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => setTeamsCount(num)}
+                      className={`px-5 py-3 md:px-6 md:py-3 rounded-full text-lg md:text-xl font-bold transition-all ${
+                        teamsCount === num 
+                        ? 'bg-amber-600 text-white shadow-md transform scale-105' 
+                        : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                      }`}
+                    >
+                      {num} 隊
+                    </button>
+                  ))}
+                </div>
               </div>
-              <button
-                onClick={requestSpin}
-                disabled={currentTeam.waitTurns > 0}
-                className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-gray-400 text-white p-3 md:p-4 rounded-2xl text-xl font-bold shadow-lg flex flex-col items-center gap-1 transition-all transform active:scale-95"
-              >
-                <Dices size={32} />
-                <span>擲骰</span>
+              <button onClick={startGame} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl text-2xl font-bold shadow-lg transition-colors flex justify-center items-center gap-2">
+                <PlayIcon /> 開始長征 (100格)
               </button>
-              {currentTeam.waitTurns > 0 && <p className="text-red-500 mt-2 font-bold text-sm">安息日：本回合休息</p>}
+            </div>
+          )}
+
+          {gameState === 'playing' && (
+            <div className="max-w-[1600px] w-full mx-auto flex flex-col lg:flex-row gap-4 md:gap-6 flex-grow">
+              
+              <div className="w-full lg:w-64 flex flex-col gap-4 flex-shrink-0">
+                <div className="bg-white p-4 md:p-6 rounded-2xl shadow-lg border-2 border-amber-200 text-center">
+                  <h3 className="text-lg font-bold text-gray-700 mb-2">現在輪到</h3>
+                  <div className="text-2xl md:text-3xl font-extrabold text-amber-700 mb-4 animate-pulse">
+                    {currentTeam.name}
+                  </div>
+                  <button
+                    onClick={requestSpin}
+                    disabled={currentTeam.waitTurns > 0}
+                    className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-gray-400 text-white p-3 md:p-4 rounded-2xl text-xl font-bold shadow-lg flex flex-col items-center gap-1 transition-all transform active:scale-95"
+                  >
+                    <DicesIcon size={32} />
+                    <span>擲轉盤</span>
+                  </button>
+                  {currentTeam.waitTurns > 0 && <p className="text-red-500 mt-2 font-bold text-sm">安息日：本回合休息</p>}
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl shadow-lg border-2 border-amber-200">
+                  <h3 className="text-lg font-bold text-amber-900 mb-3 border-b-2 border-amber-100 pb-2">隊伍進度</h3>
+                  <div className="space-y-2">
+                    {teams.map((team, idx) => (
+                      <div key={team.id} className={`p-2 rounded-lg border-2 flex justify-between items-center transition-all ${currentTurnIndex === idx ? 'border-amber-500 bg-amber-50 shadow-sm' : 'border-gray-100 bg-gray-50'}`}>
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-3 h-3 rounded-full ${team.color}`}></div>
+                          <span className="font-bold text-sm md:text-base">{team.name}</span>
+                        </div>
+                        <div className="text-xs md:text-sm font-semibold text-gray-600">
+                          第 {team.position} 格
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-full overflow-x-auto bg-amber-800/5 p-2 md:p-6 rounded-3xl shadow-inner border-4 border-amber-900/10 flex-grow">
+                <div className="min-w-[700px] lg:min-w-full">
+                  <div className="grid grid-cols-10 gap-1 md:gap-2">
+                    {getGridMap().map((tile) => {
+                      const teamsHere = teams.filter(t => t.position === tile.index);
+                      return (
+                        <div
+                          key={tile.index}
+                          className={`aspect-square relative rounded-lg border-2 flex flex-col items-center justify-center p-0.5 md:p-1 text-center shadow-sm transition-all
+                            ${getTileColor(tile.type)}
+                            ${teamsHere.length > 0 ? 'ring-2 md:ring-4 ring-amber-500 z-10 scale-110' : ''}
+                          `}
+                        >
+                          <span className="text-[10px] md:text-xs font-bold opacity-60 absolute top-0.5 left-1">{tile.index}</span>
+                          
+                          {tile.index === 0 && <span className="text-xs md:text-sm font-bold mt-2">起點</span>}
+                          {tile.index === BOARD_SIZE - 1 && <StarIcon className="text-yellow-600 w-4 h-4 md:w-6 md:h-6 mt-1" />}
+                          {tile.type === 'chance' && <HelpCircleIcon className="text-orange-500 w-4 h-4 md:w-5 md:h-5 mt-1" />}
+                          {tile.type === 'oracle' && <MapIconSvg className="text-blue-500 w-4 h-4 md:w-5 md:h-5 mt-1" />}
+                          {tile.type === 'special' && <AlertTriangleIcon className="text-red-500 w-4 h-4 md:w-5 md:h-5 mt-1" />}
+                          {tile.type === 'sabbath' && <TentIcon className="text-purple-500 w-4 h-4 md:w-5 md:h-5 mt-1" />}
+                          
+                          <div className="absolute bottom-0.5 md:bottom-1 w-full flex justify-center gap-0.5 flex-wrap px-0.5">
+                            {teamsHere.map(t => (
+                              <div key={t.id} className={`w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-full ${t.color} border border-white shadow-sm`}></div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                <div className="mt-4 flex flex-wrap justify-center gap-3 text-xs md:text-sm font-bold text-gray-700 bg-white p-2 rounded-full shadow-sm max-w-2xl mx-auto">
+                  <span className="flex items-center gap-1"><div className="w-3 h-3 bg-orange-100 border border-orange-400"></div>機會</span>
+                  <span className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-100 border border-blue-400"></div>神諭</span>
+                  <span className="flex items-center gap-1"><div className="w-3 h-3 bg-red-100 border border-red-500"></div>重大事件</span>
+                  <span className="flex items-center gap-1"><div className="w-3 h-3 bg-purple-100 border border-purple-400"></div>安息日</span>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {gameState === 'gameover' && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+              <div className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl text-center max-w-lg w-full animate-bounce">
+                <h2 className="text-3xl md:text-4xl font-extrabold text-amber-900 mb-4">哈利路亞！進入迦南！</h2>
+                <p className="text-xl md:text-2xl mb-8">
+                  恭喜 <span className="text-amber-600 font-bold text-2xl md:text-3xl">{currentTeam.name}</span> 完成了這 100 格的漫長旅程！
+                </p>
+                <button onClick={() => window.location.reload()} className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-full text-lg md:text-xl font-bold transition-all shadow-lg">
+                  重新開始旅程
+                </button>
+              </div>
+            </div>
+          )}
+
+          {modalState.isOpen && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 md:p-4">
+              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden duration-200">
+                
+                {modalState.type === 'pre-spin' && (
+                  <div className="p-6 md:p-8">
+                    <div className="bg-amber-100 text-amber-800 p-2 rounded-lg inline-block font-bold mb-4 text-sm md:text-base">轉盤挑戰</div>
+                    <h3 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">老師提問：<br/><span className="text-gray-700">{modalState.data.question.q}</span></h3>
+                    <div className="p-4 md:p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl mb-6 min-h-[90px] flex flex-col justify-center">
+                      {!showAnswer ? (
+                        <div className="text-center">
+                          <button onClick={() => setShowAnswer(true)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-bold transition-colors shadow-sm">
+                            👀 顯示參考答案
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-left">
+                          <p className="text-sm text-gray-500 mb-1">參考答案：</p>
+                          <p className="text-lg md:text-xl font-bold text-green-700">{modalState.data.question.a}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+                      <button onClick={() => executeSpin(true)} className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold flex justify-center items-center gap-2">
+                        <CheckCircle2Icon size={24} /> 答對了！擲骰
+                      </button>
+                      <button onClick={() => executeSpin(false)} className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold flex justify-center items-center gap-2">
+                        <XCircleIcon size={24} /> 答錯了...
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {modalState.type === 'spin-result' && (
+                  <div className="p-8 md:p-10 text-center">
+                    <DicesIcon className="mx-auto text-amber-500 mb-4" size={60} />
+                    <h3 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">{modalState.data.message}</h3>
+                    <button onClick={modalState.data.steps > 0 ? resolveTile : () => { closeModal(); nextTurn(); }} className="bg-amber-500 hover:bg-amber-600 text-white px-10 py-3 rounded-full text-lg md:text-xl font-bold">
+                      確定
+                    </button>
+                  </div>
+                )}
+
+                {modalState.type === 'oracle' && (
+                  <div className="p-6 md:p-8 border-t-8 border-blue-500">
+                    <div className="flex items-center gap-3 mb-4 text-blue-700">
+                      <MapIconSvg size={28} />
+                      <h2 className="text-2xl md:text-3xl font-extrabold">抽中「神諭」卡</h2>
+                    </div>
+                    <h3 className="text-lg md:text-xl font-bold mb-6">{modalState.data.card.q}</h3>
+                    <div className="p-4 bg-blue-50 rounded-xl mb-6 min-h-[80px] flex flex-col justify-center">
+                      {!showAnswer ? (
+                        <div className="text-center">
+                          <button onClick={() => setShowAnswer(true)} className="bg-blue-200 hover:bg-blue-300 text-blue-800 px-6 py-2 rounded-lg font-bold transition-colors shadow-sm">
+                            👀 顯示解答
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-left">
+                          <p className="text-sm text-gray-500 mb-1">解答：</p>
+                          <p className="font-bold text-lg text-blue-900">{modalState.data.card.a}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <button onClick={() => applyTileEffect(modalState.data.card.reward)} className="flex-1 bg-blue-500 text-white py-3 rounded-xl font-bold text-base md:text-lg hover:bg-blue-600">
+                        答對！前進 {modalState.data.card.reward} 步
+                      </button>
+                      <button onClick={() => applyTileEffect(modalState.data.card.penalty)} className="flex-1 bg-gray-500 text-white py-3 rounded-xl font-bold text-base md:text-lg hover:bg-gray-600">
+                        答錯。後退 {Math.abs(modalState.data.card.penalty)} 步
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {modalState.type === 'chance' && (
+                  <div className="p-6 md:p-8 border-t-8 border-orange-500">
+                    <div className="flex items-center gap-3 mb-4 text-orange-600">
+                      <HelpCircleIcon size={28} />
+                      <h2 className="text-2xl md:text-3xl font-extrabold">抽中「機會」卡</h2>
+                    </div>
+                    <p className="text-xl md:text-2xl font-bold text-gray-800 mb-8 leading-relaxed">
+                      {modalState.data.card.text}
+                    </p>
+                    <div className="text-center">
+                      <button onClick={() => applyTileEffect(modalState.data.card.effect)} className="bg-orange-500 hover:bg-orange-600 text-white px-10 py-3 rounded-full text-lg md:text-xl font-bold">
+                        接受命運 ({modalState.data.card.effect > 0 ? `+${modalState.data.card.effect}步` : modalState.data.card.effect === 0 ? '無影響' : `${modalState.data.card.effect}步`})
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {modalState.type === 'sabbath-event' && (
+                  <div className="p-6 md:p-8 text-center border-t-8 border-purple-500">
+                    <TentIcon className="mx-auto text-purple-600 mb-4" size={50} />
+                    <h2 className="text-2xl md:text-3xl font-extrabold text-purple-800 mb-4">守安息日</h2>
+                    <p className="text-lg md:text-xl text-gray-700 mb-8">
+                      神吩咐百姓在安息日不可作工。你們的隊伍將在此安營休息，**暫停兩個回合**。
+                    </p>
+                    <button onClick={() => applyTileEffect(0, true)} className="bg-purple-600 hover:bg-purple-700 text-white px-10 py-3 rounded-full text-lg md:text-xl font-bold">
+                      順服安息 (結束回合)
+                    </button>
+                  </div>
+                )}
+
+                {modalState.type === 'sabbath-alert' && (
+                  <div className="p-6 md:p-8 text-center">
+                    <AlertTriangleIcon className="mx-auto text-purple-500 mb-4" size={50} />
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">
+                      {modalState.data.team.name} 正在守安息日
+                    </h2>
+                    <p className="text-base md:text-lg text-gray-600 mb-6">
+                      還需要休息 {modalState.data.team.waitTurns} 個回合。跳過此回合。
+                    </p>
+                    <button onClick={handleSabbathAcknowledge} className="bg-gray-800 text-white px-8 py-2 rounded-full font-bold">
+                      我知道了
+                    </button>
+                  </div>
+                )}
+
+                {modalState.type === 'special-discussion' && (
+                  <SpecialEventModal 
+                    event={modalState.data.event} 
+                    teams={teams}
+                    onComplete={applySpecialEventAdjustments} 
+                  />
+                )}
+
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function SpecialEventModal({ event, teams, onComplete }) {
+      const [adjustments, setAdjustments] = useState(teams.map(() => 0));
+
+      const changeScore = (teamIndex, delta) => {
+        const newAdj = [...adjustments];
+        newAdj[teamIndex] += delta;
+        setAdjustments(newAdj);
+      };
+
+      return (
+        <div className="flex flex-col h-[85vh] md:h-auto max-h-[90vh]">
+          <div className="p-4 md:p-6 bg-red-600 text-white flex items-center gap-3 shrink-0">
+            <AlertTriangleIcon size={28} />
+            <h2 className="text-xl md:text-2xl font-extrabold">{event.title}</h2>
+          </div>
+          
+          <div className="p-4 md:p-6 overflow-y-auto flex-grow">
+            <div className="bg-red-50 p-3 md:p-4 rounded-xl mb-4 md:mb-6 border-l-4 border-red-500">
+              <p className="text-base md:text-lg text-gray-800 font-medium">{event.desc}</p>
+            </div>
+            
+            <div className="mb-6">
+              <h3 className="text-lg md:text-xl font-bold text-red-800 mb-2">【全班討論時間】</h3>
+              <p className="text-base md:text-lg font-bold text-gray-700 bg-gray-100 p-3 md:p-4 rounded-xl leading-relaxed">
+                {event.discussion}
+              </p>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl shadow-lg border-2 border-amber-200">
-              <h3 className="text-lg font-bold text-amber-900 mb-3 border-b-2 border-amber-100 pb-2">隊伍進度</h3>
-              <div className="space-y-2">
+            <div className="border-t-2 border-gray-200 pt-4 mt-4">
+              <h3 className="text-base md:text-lg font-bold text-gray-700 mb-3">老師評分 (可為任何積極參與的隊伍加減步數)：</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
                 {teams.map((team, idx) => (
-                  <div key={team.id} className={`p-2 rounded-lg border-2 flex justify-between items-center transition-all ${currentTurnIndex === idx ? 'border-amber-500 bg-amber-50 shadow-sm' : 'border-gray-100 bg-gray-50'}`}>
-                    <div className="flex items-center gap-1.5">
+                  <div key={team.id} className="flex items-center justify-between bg-white border-2 border-gray-200 p-2 md:p-3 rounded-lg">
+                    <span className="font-bold flex items-center gap-2 text-sm md:text-base">
                       <div className={`w-3 h-3 rounded-full ${team.color}`}></div>
-                      <span className="font-bold text-sm md:text-base">{team.name}</span>
-                    </div>
-                    <div className="text-xs md:text-sm font-semibold text-gray-600">
-                      第 {team.position} 格
+                      {team.name}
+                    </span>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <button onClick={() => changeScore(idx, -1)} className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-red-100 text-red-600 font-bold hover:bg-red-200 flex items-center justify-center">-</button>
+                      <span className="w-5 md:w-6 text-center font-bold text-base md:text-lg">{adjustments[idx] > 0 ? `+${adjustments[idx]}` : adjustments[idx]}</span>
+                      <button onClick={() => changeScore(idx, 1)} className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-green-100 text-green-600 font-bold hover:bg-green-200 flex items-center justify-center">+</button>
                     </div>
                   </div>
                 ))}
@@ -381,275 +668,21 @@ export default function App() {
             </div>
           </div>
 
-          {/* 右側地圖區 - 加上水平捲動以適應手機 */}
-          <div className="w-full overflow-x-auto bg-amber-800/5 p-2 md:p-6 rounded-3xl shadow-inner border-4 border-amber-900/10 flex-grow">
-            {/* 強制設定最小寬度，讓100格在小螢幕上也能保持網格形狀 */}
-            <div className="min-w-[700px] lg:min-w-full">
-              <div className="grid grid-cols-10 gap-1 md:gap-2">
-                {getGridMap().map((tile) => {
-                  const teamsHere = teams.filter(t => t.position === tile.index);
-                  return (
-                    <div
-                      key={tile.index}
-                      className={`aspect-square relative rounded-lg border-2 flex flex-col items-center justify-center p-0.5 md:p-1 text-center shadow-sm transition-all
-                        ${getTileColor(tile.type)}
-                        ${teamsHere.length > 0 ? 'ring-2 md:ring-4 ring-amber-500 z-10 scale-110' : ''}
-                      `}
-                    >
-                      <span className="text-[10px] md:text-xs font-bold opacity-60 absolute top-0.5 left-1">{tile.index}</span>
-                      
-                      {/* 依據格子類型顯示不同 icon */}
-                      {tile.index === 0 && <span className="text-xs md:text-sm font-bold mt-2">起點</span>}
-                      {tile.index === BOARD_SIZE - 1 && <Star className="text-yellow-600 w-4 h-4 md:w-6 md:h-6 mt-1" />}
-                      {tile.type === 'chance' && <HelpCircle className="text-orange-500 w-4 h-4 md:w-5 md:h-5 mt-1" />}
-                      {tile.type === 'oracle' && <Map className="text-blue-500 w-4 h-4 md:w-5 md:h-5 mt-1" />}
-                      {tile.type === 'special' && <AlertTriangle className="text-red-500 w-4 h-4 md:w-5 md:h-5 mt-1" />}
-                      {tile.type === 'sabbath' && <Tent className="text-purple-500 w-4 h-4 md:w-5 md:h-5 mt-1" />}
-                      
-                      {/* 棋子群 */}
-                      <div className="absolute bottom-0.5 md:bottom-1 w-full flex justify-center gap-0.5 flex-wrap px-0.5">
-                        {teamsHere.map(t => (
-                          <div key={t.id} className={`w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-full ${t.color} border border-white shadow-sm`}></div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            
-            <div className="mt-4 flex flex-wrap justify-center gap-3 text-xs md:text-sm font-bold text-gray-700 bg-white p-2 rounded-full shadow-sm max-w-2xl mx-auto">
-              <span className="flex items-center gap-1"><div className="w-3 h-3 bg-orange-100 border border-orange-400"></div>機會</span>
-              <span className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-100 border border-blue-400"></div>神諭</span>
-              <span className="flex items-center gap-1"><div className="w-3 h-3 bg-red-100 border border-red-500"></div>重大事件</span>
-              <span className="flex items-center gap-1"><div className="w-3 h-3 bg-purple-100 border border-purple-400"></div>安息日</span>
-            </div>
-          </div>
-
-        </div>
-      )}
-
-      {/* 遊戲結束與 Modals */}
-      {gameState === 'gameover' && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl text-center max-w-lg w-full animate-bounce">
-            <TrophyIcon className="mx-auto text-yellow-500 mb-6" size={80} />
-            <h2 className="text-3xl md:text-4xl font-extrabold text-amber-900 mb-4">感謝主！成功進入迦南！</h2>
-            <p className="text-xl md:text-2xl mb-8">
-              恭喜 <span className="text-amber-600 font-bold text-2xl md:text-3xl">{currentTeam.name}</span> 完成了這 40年的漫長旅程！
-            </p>
-            <button onClick={() => window.location.reload()} className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-full text-lg md:text-xl font-bold transition-all shadow-lg">
-              重新開始旅程
+          <div className="p-4 bg-gray-50 border-t border-gray-200 text-right shrink-0">
+            <button 
+              onClick={() => onComplete(adjustments)} 
+              className="bg-red-600 hover:bg-red-700 text-white px-6 md:px-8 py-2 md:py-3 rounded-xl text-base md:text-lg font-bold shadow-md"
+            >
+              完成事件討論
             </button>
           </div>
         </div>
-      )}
+      );
+    }
 
-      {modalState.isOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 md:p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            
-            {modalState.type === 'pre-spin' && (
-              <div className="p-6 md:p-8">
-                <div className="bg-amber-100 text-amber-800 p-2 rounded-lg inline-block font-bold mb-4 text-sm md:text-base">擲骰挑戰</div>
-                <h3 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">提問：<br/><span className="text-gray-700">{modalState.data.question.q}</span></h3>
-                <div className="p-4 md:p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl mb-6 min-h-[90px] flex flex-col justify-center">
-                  {!showAnswer ? (
-                    <div className="text-center">
-                      <button onClick={() => setShowAnswer(true)} className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg font-bold transition-colors shadow-sm">
-                        顯示參考答案
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-left animate-in fade-in zoom-in-95 duration-300">
-                      <p className="text-sm text-gray-500 mb-1">參考答案：</p>
-                      <p className="text-lg md:text-xl font-bold text-green-700">{modalState.data.question.a}</p>
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-                  <button onClick={() => executeSpin(true)} className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold flex justify-center items-center gap-2">
-                    <CheckCircle2 /> 答對了！前進
-                  </button>
-                  <button onClick={() => executeSpin(false)} className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold flex justify-center items-center gap-2">
-                    <XCircle /> 答錯了...
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {modalState.type === 'spin-result' && (
-              <div className="p-8 md:p-10 text-center">
-                <Dices className="mx-auto text-amber-500 mb-4" size={50} md:size={60} />
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">{modalState.data.message}</h3>
-                <button onClick={modalState.data.steps > 0 ? resolveTile : () => { closeModal(); nextTurn(); }} className="bg-amber-500 hover:bg-amber-600 text-white px-10 py-3 rounded-full text-lg md:text-xl font-bold">
-                  確定
-                </button>
-              </div>
-            )}
-
-            {modalState.type === 'oracle' && (
-              <div className="p-6 md:p-8 border-t-8 border-blue-500">
-                <div className="flex items-center gap-3 mb-4 text-blue-700">
-                  <Map size={28} />
-                  <h2 className="text-2xl md:text-3xl font-extrabold">抽中「神諭」卡</h2>
-                </div>
-                <h3 className="text-lg md:text-xl font-bold mb-6">{modalState.data.card.q}</h3>
-                <div className="p-4 bg-blue-50 rounded-xl mb-6 min-h-[80px] flex flex-col justify-center">
-                  {!showAnswer ? (
-                    <div className="text-center">
-                      <button onClick={() => setShowAnswer(true)} className="bg-blue-200 hover:bg-blue-300 text-blue-800 px-6 py-2 rounded-lg font-bold transition-colors shadow-sm">
-                        顯示解答
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-left animate-in fade-in zoom-in-95 duration-300">
-                      <p className="text-sm text-gray-500 mb-1">解答：</p>
-                      <p className="font-bold text-lg text-blue-900">{modalState.data.card.a}</p>
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col md:flex-row gap-3">
-                  <button onClick={() => applyTileEffect(modalState.data.card.reward)} className="flex-1 bg-blue-500 text-white py-3 rounded-xl font-bold text-base md:text-lg hover:bg-blue-600">
-                    答對！前進 {modalState.data.card.reward} 步
-                  </button>
-                  <button onClick={() => applyTileEffect(modalState.data.card.penalty)} className="flex-1 bg-gray-500 text-white py-3 rounded-xl font-bold text-base md:text-lg hover:bg-gray-600">
-                    答錯。後退 {Math.abs(modalState.data.card.penalty)} 步
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {modalState.type === 'chance' && (
-              <div className="p-6 md:p-8 border-t-8 border-orange-500">
-                <div className="flex items-center gap-3 mb-4 text-orange-600">
-                  <HelpCircle size={28} />
-                  <h2 className="text-2xl md:text-3xl font-extrabold">抽中「機會」卡</h2>
-                </div>
-                <p className="text-xl md:text-2xl font-bold text-gray-800 mb-8 leading-relaxed">
-                  {modalState.data.card.text}
-                </p>
-                <div className="text-center">
-                  <button onClick={() => applyTileEffect(modalState.data.card.effect)} className="bg-orange-500 hover:bg-orange-600 text-white px-10 py-3 rounded-full text-lg md:text-xl font-bold">
-                    接受神旨意 ({modalState.data.card.effect > 0 ? `+${modalState.data.card.effect}步` : modalState.data.card.effect === 0 ? '無影響' : `${modalState.data.card.effect}步`})
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {modalState.type === 'sabbath-event' && (
-              <div className="p-6 md:p-8 text-center border-t-8 border-purple-500">
-                <Tent className="mx-auto text-purple-600 mb-4" size={50} />
-                <h2 className="text-2xl md:text-3xl font-extrabold text-purple-800 mb-4">守安息日</h2>
-                <p className="text-lg md:text-xl text-gray-700 mb-8">
-                  神吩咐百姓在安息日不可作工。你們的隊伍將在此安營休息，**暫停兩個回合**。
-                </p>
-                <button onClick={() => applyTileEffect(0, true)} className="bg-purple-600 hover:bg-purple-700 text-white px-10 py-3 rounded-full text-lg md:text-xl font-bold">
-                  順服安息
-                </button>
-              </div>
-            )}
-
-            {modalState.type === 'sabbath-alert' && (
-              <div className="p-6 md:p-8 text-center">
-                <AlertTriangle className="mx-auto text-purple-500 mb-4" size={50} />
-                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">
-                  {modalState.data.team.name} 正在守安息日
-                </h2>
-                <p className="text-base md:text-lg text-gray-600 mb-6">
-                  還需要休息 {modalState.data.team.waitTurns} 個回合。跳過此回合。
-                </p>
-                <button onClick={handleSabbathAcknowledge} className="bg-gray-800 text-white px-8 py-2 rounded-full font-bold">
-                  我知道了
-                </button>
-              </div>
-            )}
-
-            {modalState.type === 'special-discussion' && (
-              <SpecialEventModal 
-                event={modalState.data.event} 
-                teams={teams}
-                onComplete={applySpecialEventAdjustments} 
-              />
-            )}
-
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// 獨立組件：處理重大事件
-function SpecialEventModal({ event, teams, onComplete }) {
-  const [adjustments, setAdjustments] = useState(teams.map(() => 0));
-
-  const changeScore = (teamIndex, delta) => {
-    const newAdj = [...adjustments];
-    newAdj[teamIndex] += delta;
-    setAdjustments(newAdj);
-  };
-
-  return (
-    <div className="flex flex-col h-[85vh] md:h-auto max-h-[90vh]">
-      <div className="p-4 md:p-6 bg-red-600 text-white flex items-center gap-3 shrink-0">
-        <AlertTriangle size={28} />
-        <h2 className="text-xl md:text-2xl font-extrabold">{event.title}</h2>
-      </div>
-      
-      <div className="p-4 md:p-6 overflow-y-auto flex-grow">
-        <div className="bg-red-50 p-3 md:p-4 rounded-xl mb-4 md:mb-6 border-l-4 border-red-500">
-          <p className="text-base md:text-lg text-gray-800 font-medium">{event.desc}</p>
-        </div>
-        
-        <div className="mb-6">
-          <h3 className="text-lg md:text-xl font-bold text-red-800 mb-2">【討論時間】</h3>
-          <p className="text-base md:text-lg font-bold text-gray-700 bg-gray-100 p-3 md:p-4 rounded-xl leading-relaxed">
-            {event.discussion}
-          </p>
-        </div>
-
-        <div className="border-t-2 border-gray-200 pt-4 mt-4">
-          <h3 className="text-base md:text-lg font-bold text-gray-700 mb-3">評分 (可為任何積極參與的隊伍加減步數)：</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
-            {teams.map((team, idx) => (
-              <div key={team.id} className="flex items-center justify-between bg-white border-2 border-gray-200 p-2 md:p-3 rounded-lg">
-                <span className="font-bold flex items-center gap-2 text-sm md:text-base">
-                  <div className={`w-3 h-3 rounded-full ${team.color}`}></div>
-                  {team.name}
-                </span>
-                <div className="flex items-center gap-2 md:gap-3">
-                  <button onClick={() => changeScore(idx, -1)} className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-red-100 text-red-600 font-bold hover:bg-red-200 flex items-center justify-center">-</button>
-                  <span className="w-5 md:w-6 text-center font-bold text-base md:text-lg">{adjustments[idx] > 0 ? `+${adjustments[idx]}` : adjustments[idx]}</span>
-                  <button onClick={() => changeScore(idx, 1)} className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-green-100 text-green-600 font-bold hover:bg-green-200 flex items-center justify-center">+</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 bg-gray-50 border-t border-gray-200 text-right shrink-0">
-        <button 
-          onClick={() => onComplete(adjustments)} 
-          className="bg-red-600 hover:bg-red-700 text-white px-6 md:px-8 py-2 md:py-3 rounded-xl text-base md:text-lg font-bold shadow-md"
-        >
-          完成事件討論
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function TrophyIcon(props) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-      <path d="M4 22h16" />
-      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-      <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-    </svg>
-  );
-}
+    // 將 App 渲染到畫面上
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
