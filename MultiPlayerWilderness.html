@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>《民數記》之曠野求生 - 即時連線版</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- 引入 Firebase 模組並掛載到 window，讓 Babel 可以讀取 -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+    import { getFirestore, doc, setDoc, onSnapshot, collection } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+
+    window.FirebaseAPI = { initializeApp, getFirestore, doc, setDoc, onSnapshot, collection, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
+    window.dispatchEvent(new Event('firebase-loaded'));
+  </script>
+</head>
+<body class="bg-[#f4ebd0] text-gray-800">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // =========================================================================
+    // ↓↓↓↓↓ 自訂編輯區：神學內容、問題與事件 ↓↓↓↓↓
+    // =========================================================================
+
+    const TRIBES = ["流便支派", "西緬支派", "猶大支派", "以薩迦支派", "西布倫支派", "便雅憫支派", "但支派", "拿弗他利支派", "迦得支派", "亞設支派", "以法蓮支派", "瑪拿西支派"];
+    const TEAM_COLORS = ['bg-red-500', 'bg-blue-600', 'bg-green-600', 'bg-yellow-500', 'bg-purple-600', 'bg-pink-500', 'bg-indigo-600', 'bg-teal-500', 'bg-orange-500', 'bg-cyan-600', 'bg-lime-600', 'bg-emerald-700'];
+
+    const PRE_SPIN_QUESTIONS = [
+      { q: "《民數記》記載了以色列人離開西奈山後，在何處漂流了近四十年？", a: "曠野 (Wilderness)" },
+      { q: "引導以色列人前行的，白天和黑夜分別是什麼現象？", a: "白天雲柱，黑夜火柱" },
+      { q: "以色列人抱怨沒有肉吃，神降下了什麼鳥給他們？", a: "鵪鶉" },
+      { q: "十二個探子中，哪兩個人充滿信心，相信神會將迦南地賜給他們？", a: "迦勒和約書亞" },
+      { q: "神為了平息叛亂、確立亞倫的祭司職分，使亞倫的杖發生了什麼神蹟？", a: "發芽、開花、結了熟杏" },
+      { q: "摩西在尋的曠野，因為百姓爭鬧要水喝，他做錯了什麼事導致不能進迦南？", a: "沒有尊神為聖，用杖擊打磐石兩下" },
+      { q: "以色列人因怨言被火蛇咬傷，神命摩西掛起什麼，使仰望的人得以存活？", a: "銅蛇" },
+      { q: "「什亭事件」中，以色列人陷入了什麼罪，惹動神的怒氣降下瘟疫？", a: "與摩押女子行淫，並跪拜巴力毗珥" }
+    ];
+
+    const BOARD_SIZE = 40;
+
+    // --- 圖示 ---
+    const Icon = ({ children, size=24, className="" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>;
+    const FlameIcon = (p) => <Icon {...p}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></Icon>;
+    const UsersIcon = (p) => <Icon {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>;
+    const MonitorIcon = (p) => <Icon {...p}><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></Icon>;
+    const SmartphoneIcon = (p) => <Icon {...p}><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></Icon>;
+    
+    // =========================================================================
+    // 遊戲主程式 (React)
+    // =========================================================================
+    function App() {
+      const [fbReady, setFbReady] = useState(false);
+      const [db, setDb] = useState(null);
+      const [user, setUser] = useState(null);
+      const [appId, setAppId] = useState('local-test-app');
+
+      // 遊戲狀態
+      const [role, setRole] = useState(null); // 'host' or 'player'
+      const [roomId, setRoomId] = useState('');
+      const [roomData, setRoomData] = useState(null);
+      
+      // 玩家專屬狀態
+      const [myTeamId, setMyTeamId] = useState(null);
+      const [joinInput, setJoinInput] = useState('');
+
+      // 1. 初始化 Firebase
+      useEffect(() => {
+        const initFirebase = async () => {
+          if (!window.FirebaseAPI) return;
+
+          // GitHub 上運行請替換這裡的 config！
+          let config = {
+            apiKey: "AIzaSyBE5fLW8-zI7zVQchm2Pn2uphwOlYs98zI",
+            authDomain: "multiplayerwilderness-75a0b.firebaseapp.com",
+            projectId: "multiplayerwilderness-75a0b",
+            storageBucket: "multiplayerwilderness-75a0b.firebasestorage.app",
+            messagingSenderId: "579028026049",
+            appId: "1:579028026049:web:fcf5d2ba38cca2a34f0a40"
+          };
+          
+          let envAppId = 'github-numbers-game';
+
+          // 若在 Canvas 預覽環境中，自動使用預設金鑰
+          if (typeof __firebase_config !== 'undefined') {
+            config = JSON.parse(__firebase_config);
+          }
+          if (typeof __app_id !== 'undefined') {
+            envAppId = __app_id;
+          }
+          setAppId(envAppId);
+
+          const app = window.FirebaseAPI.initializeApp(config);
+          const auth = window.FirebaseAPI.getAuth(app);
+          const firestore = window.FirebaseAPI.getFirestore(app);
+          setDb(firestore);
+
+          // 匿名登入 (確保有權限讀寫)
+          const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+              await window.FirebaseAPI.signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+              await window.FirebaseAPI.signInAnonymously(auth);
+            }
+          };
+          await initAuth();
+
+          window.FirebaseAPI.onAuthStateChanged(auth, (u) => {
+            setUser(u);
+            setFbReady(true);
+          });
+        };
+
+        if (window.FirebaseAPI) initFirebase();
+        else window.addEventListener('firebase-loaded', initFirebase);
+        
+        return () => window.removeEventListener('firebase-loaded', initFirebase);
+      }, []);
+
+      // 2. 監聽房間資料變化
+      useEffect(() => {
+        if (!db || !user || !roomId) return;
+        
+        // 嚴格遵守路徑規則: /artifacts/{appId}/public/data/{collectionName}
+        const roomRef = window.FirebaseAPI.doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+        
+        const unsubscribe = window.FirebaseAPI.onSnapshot(roomRef, (snapshot) => {
+          if (snapshot.exists()) {
+            setRoomData(snapshot.data());
+          } else {
+            alert('房間不存在或已關閉！');
+            setRole(null);
+            setRoomId('');
+          }
+        }, (error) => {
+          console.error("Firestore error:", error);
+        });
+
+        return () => unsubscribe();
+      }, [db, user, roomId, appId]);
+
+      // 更新 Firestore 資料的輔助函數
+      const updateRoom = async (updates) => {
+        if (!db || !roomId) return;
+        const roomRef = window.FirebaseAPI.doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+        await window.FirebaseAPI.setDoc(roomRef, updates, { merge: true });
+      };
+
+      // ==========================================
+      // 主機端 (老師) 邏輯
+      // ==========================================
+      const createRoom = async () => {
+        const newRoomId = Math.floor(1000 + Math.random() * 9000).toString();
+        const initialTeams = TRIBES.slice(0, 6).map((tribe, i) => ({
+          id: i, name: tribe, color: TEAM_COLORS[i], position: 0, players: 0
+        }));
+
+        const initialData = {
+          hostId: user.uid,
+          state: 'lobby',
+          teams: initialTeams,
+          currentTurn: 0,
+          activeQuestion: null // { q, a, buzzedBy: null, status: 'waiting' }
+        };
+
+        const roomRef = window.FirebaseAPI.doc(db, 'artifacts', appId, 'public', 'data', 'rooms', newRoomId);
+        await window.FirebaseAPI.setDoc(roomRef, initialData);
+        
+        setRoomId(newRoomId);
+        setRole('host');
+      };
+
+      const startGame = () => updateRoom({ state: 'playing' });
+
+      const drawQuestion = () => {
+        const q = PRE_SPIN_QUESTIONS[Math.floor(Math.random() * PRE_SPIN_QUESTIONS.length)];
+        updateRoom({ activeQuestion: { ...q, buzzedBy: null, status: 'waiting' } });
+      };
+
+      const gradeAnswer = (isCorrect) => {
+        if (isCorrect) {
+          const steps = Math.floor(Math.random() * 4) + 1; // 隨機步數
+          const teams = [...roomData.teams];
+          let newPos = teams[roomData.currentTurn].position + steps;
+          if (newPos >= BOARD_SIZE - 1) newPos = BOARD_SIZE - 1;
+          
+          teams[roomData.currentTurn].position = newPos;
+          
+          let nextTurn = (roomData.currentTurn + 1) % teams.length;
+          
+          updateRoom({ 
+            teams, 
+            currentTurn: nextTurn,
+            activeQuestion: null,
+            state: newPos === BOARD_SIZE - 1 ? 'gameover' : 'playing'
+          });
+        } else {
+          // 答錯，換下一隊
+          let nextTurn = (roomData.currentTurn + 1) % roomData.teams.length;
+          updateRoom({ currentTurn: nextTurn, activeQuestion: null });
+        }
+      };
+
+      // ==========================================
+      // 玩家端 (學生) 邏輯
+      // ==========================================
+      const joinRoom = async () => {
+        if (joinInput.length !== 4) return alert('請輸入4位數代碼');
+        setRoomId(joinInput);
+        setRole('player');
+      };
+
+      const selectTeam = (teamId) => {
+        // 簡單紀錄人數增加
+        const teams = [...roomData.teams];
+        teams[teamId].players += 1;
+        updateRoom({ teams });
+        setMyTeamId(teamId);
+      };
+
+      const pressBuzzer = () => {
+        if (roomData.activeQuestion && roomData.activeQuestion.buzzedBy === null) {
+          // 只有當前回合的隊伍才能搶答 (或者也可以開放給全班搶)
+          // 這裡設定：如果是你們隊伍的回合，你們才能按搶答
+          if (roomData.currentTurn === myTeamId) {
+             updateRoom({ activeQuestion: { ...roomData.activeQuestion, buzzedBy: myTeamId, status: 'answered' } });
+          }
+        }
+      };
+
+      // ==========================================
+      // 畫面渲染區
+      // ==========================================
+      if (!fbReady) return <div className="h-screen flex items-center justify-center text-2xl font-bold">載入連線模組中...</div>;
+
+      // --- 1. 首頁 (選擇身分) ---
+      if (!role) {
+        return (
+          <div className="h-screen flex flex-col items-center justify-center p-4">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-amber-900 mb-10 text-center">《民數記》<br/>曠野求生連線版</h1>
+            <div className="flex flex-col md:flex-row gap-6 w-full max-w-2xl">
+              
+              <div className="flex-1 bg-white p-8 rounded-3xl shadow-xl border-4 border-amber-600 text-center flex flex-col items-center">
+                <MonitorIcon size={64} className="text-amber-600 mb-4" />
+                <h2 className="text-2xl font-bold mb-2">我是老師 (主機)</h2>
+                <p className="text-gray-500 mb-6">投影在地圖大螢幕，控制遊戲進度與題目。</p>
+                <button onClick={createRoom} className="w-full bg-amber-700 hover:bg-amber-800 text-white py-4 rounded-xl text-xl font-bold">建立新房間</button>
+              </div>
+
+              <div className="flex-1 bg-white p-8 rounded-3xl shadow-xl border-4 border-blue-600 text-center flex flex-col items-center">
+                <SmartphoneIcon size={64} className="text-blue-600 mb-4" />
+                <h2 className="text-2xl font-bold mb-2">我是學生 (玩家)</h2>
+                <p className="text-gray-500 mb-6">使用手機加入房間，進行即時連線搶答！</p>
+                <input 
+                  type="text" 
+                  placeholder="輸入 4 位數代碼" 
+                  className="w-full p-4 mb-4 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl"
+                  maxLength="4"
+                  value={joinInput}
+                  onChange={e => setJoinInput(e.target.value)}
+                />
+                <button onClick={joinRoom} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl text-xl font-bold">進入遊戲</button>
+              </div>
+
+            </div>
+          </div>
+        );
+      }
+
+      // 等待資料載入中
+      if (!roomData) return <div className="h-screen flex items-center justify-center text-2xl font-bold">連線中...</div>;
+
+      // --- 2. 老師端畫面 ---
+      if (role === 'host') {
+        if (roomData.state === 'lobby') {
+          return (
+            <div className="h-screen flex flex-col items-center justify-center p-4 text-center">
+              <h1 className="text-4xl font-bold text-gray-700 mb-4">請學生輸入房間代碼加入</h1>
+              <div className="text-8xl font-black text-amber-800 tracking-widest bg-white px-10 py-6 rounded-3xl shadow-lg border-4 border-amber-500 mb-10">
+                {roomId}
+              </div>
+              <div className="flex flex-wrap justify-center gap-4 mb-10 max-w-4xl">
+                {roomData.teams.map(t => (
+                  <div key={t.id} className={`${t.color} text-white px-6 py-4 rounded-xl font-bold text-xl flex items-center gap-2 shadow-md`}>
+                    <UsersIcon /> {t.name} ( {t.players} 人 )
+                  </div>
+                ))}
+              </div>
+              <button onClick={startGame} className="bg-green-600 hover:bg-green-700 text-white px-12 py-4 rounded-full text-2xl font-bold shadow-xl animate-pulse">
+                人到齊了，開始遊戲！
+              </button>
+            </div>
+          );
+        }
+
+        // 老師遊戲中畫面
+        return (
+          <div className="min-h-screen p-4 flex flex-col lg:flex-row gap-6 max-w-[1600px] mx-auto">
+            {/* 左側：控制台 */}
+            <div className="w-full lg:w-80 bg-white p-6 rounded-3xl shadow-xl flex-shrink-0 flex flex-col">
+              <h2 className="text-xl font-bold text-gray-500 mb-2">房間 PIN: {roomId}</h2>
+              <div className="bg-amber-100 p-4 rounded-2xl mb-6 text-center border-2 border-amber-300">
+                <h3 className="text-lg font-bold">當前回合</h3>
+                <p className="text-3xl font-black text-amber-800">{roomData.teams[roomData.currentTurn].name}</p>
+              </div>
+
+              {!roomData.activeQuestion ? (
+                <button onClick={drawQuestion} className="bg-amber-700 hover:bg-amber-800 text-white py-8 rounded-2xl text-2xl font-bold shadow-lg flex flex-col items-center gap-2">
+                  <FlameIcon size={48}/> 點此抽題獻祭
+                </button>
+              ) : (
+                <div className="bg-red-50 p-4 rounded-2xl border-4 border-red-500 text-center">
+                  <h3 className="font-bold text-red-800 mb-2">學生搶答中...</h3>
+                  <p className="text-xl font-bold mb-4">{roomData.activeQuestion.q}</p>
+                  
+                  {roomData.activeQuestion.buzzedBy !== null ? (
+                    <div className="animate-bounce">
+                      <p className="text-xl font-black text-blue-700 bg-blue-100 p-2 rounded-lg mb-4">
+                        🔔 {roomData.teams[roomData.activeQuestion.buzzedBy].name} 已按鈴！
+                      </p>
+                      <p className="text-sm text-gray-600 mb-2">請聽他們口頭回答。參考答案：<br/><span className="text-lg font-bold text-green-700">{roomData.activeQuestion.a}</span></p>
+                      <div className="flex gap-2">
+                        <button onClick={() => gradeAnswer(true)} className="flex-1 bg-green-600 text-white py-3 rounded-xl font-bold">答對了</button>
+                        <button onClick={() => gradeAnswer(false)} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold">答錯了</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 animate-pulse">等待學生按下手機上的搶答鈕...</p>
+                  )}
+                </div>
+              )}
+
+              {/* 進度列表 */}
+              <div className="mt-6 flex-grow space-y-2">
+                {roomData.teams.map((t, idx) => (
+                  <div key={t.id} className={`p-3 rounded-xl border-2 flex justify-between font-bold ${roomData.currentTurn === idx ? 'border-amber-500 bg-amber-50' : 'border-gray-200'}`}>
+                    <span className="flex items-center gap-2"><div className={`w-3 h-3 rounded-full ${t.color}`}></div>{t.name}</span>
+                    <span>第 {t.position} 格</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 右側：地圖 (簡易呈現進度條) */}
+            <div className="flex-grow bg-white p-8 rounded-3xl shadow-xl flex flex-col gap-4">
+              <h2 className="text-3xl font-extrabold text-amber-900 border-b-4 border-amber-200 pb-4">曠野路線圖 (起點 → 迦南)</h2>
+              <div className="flex-grow relative flex flex-col justify-around">
+                {roomData.teams.map(t => (
+                  <div key={t.id} className="w-full bg-gray-100 h-12 rounded-full relative overflow-hidden shadow-inner">
+                    <div 
+                      className={`h-full ${t.color} absolute left-0 top-0 transition-all duration-1000 ease-in-out flex items-center justify-end px-4 font-bold text-white shadow-md`}
+                      style={{ width: `${(t.position / BOARD_SIZE) * 100}%`, minWidth: '10%' }}
+                    >
+                      {t.name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // --- 3. 學生端畫面 (手機最適化) ---
+      if (role === 'player') {
+        if (roomData.state === 'lobby' && myTeamId === null) {
+          return (
+            <div className="h-screen p-6 flex flex-col items-center">
+              <h2 className="text-2xl font-bold mb-6">已連線房間: {roomId}</h2>
+              <h1 className="text-3xl font-extrabold mb-8 text-amber-900">請選擇你的隊伍</h1>
+              <div className="grid grid-cols-2 gap-4 w-full max-w-md">
+                {roomData.teams.map(t => (
+                  <button 
+                    key={t.id} 
+                    onClick={() => selectTeam(t.id)}
+                    className={`${t.color} text-white p-4 rounded-2xl font-bold shadow-md hover:scale-105 transition-transform`}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        if (roomData.state === 'lobby') {
+          return <div className="h-screen flex items-center justify-center text-2xl font-bold text-center p-6">成功加入 {roomData.teams[myTeamId].name}！<br/>請看大螢幕等待老師開始遊戲。</div>;
+        }
+
+        if (roomData.state === 'gameover') {
+          return <div className="h-screen flex items-center justify-center text-4xl font-black text-green-700 animate-bounce">遊戲結束！</div>
+        }
+
+        // 學生遊戲中畫面 (手機)
+        const isMyTurn = roomData.currentTurn === myTeamId;
+        const myTeam = roomData.teams[myTeamId];
+
+        return (
+          <div className="h-screen flex flex-col p-4">
+            <div className={`${myTeam.color} text-white p-4 rounded-2xl shadow-lg flex justify-between items-center mb-6`}>
+              <span className="font-bold text-xl">{myTeam.name}</span>
+              <span className="font-bold">進度: {myTeam.position} / 40</span>
+            </div>
+
+            <div className="flex-grow flex flex-col items-center justify-center text-center">
+              {roomData.activeQuestion ? (
+                <div className="w-full flex flex-col items-center">
+                  <h2 className="text-2xl font-bold mb-8 text-gray-800">{roomData.activeQuestion.q}</h2>
+                  
+                  {isMyTurn ? (
+                    <button 
+                      onClick={pressBuzzer}
+                      disabled={roomData.activeQuestion.buzzedBy !== null}
+                      className="w-48 h-48 rounded-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white font-black text-4xl shadow-[0_10px_0_rgb(153,27,27)] active:shadow-[0_0px_0_rgb(153,27,27)] active:translate-y-[10px] transition-all flex items-center justify-center cursor-pointer border-4 border-red-300"
+                    >
+                      {roomData.activeQuestion.buzzedBy === myTeamId ? '已搶到！\n請發言' : '搶答！'}
+                    </button>
+                  ) : (
+                    <div className="text-xl font-bold text-gray-500 bg-white p-8 rounded-3xl shadow-sm border-2 border-gray-200">
+                      現在是 {roomData.teams[roomData.currentTurn].name} 的回合。<br/>請安靜觀戰。
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-2xl font-bold text-gray-400">
+                  {isMyTurn ? (
+                    <span className="text-amber-600 animate-pulse">換你們了！請看大螢幕，等待老師抽題...</span>
+                  ) : (
+                    <span>等待回合推進中...</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      return null;
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
