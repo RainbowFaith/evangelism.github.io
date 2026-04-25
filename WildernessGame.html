@@ -11,8 +11,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <!-- 引入 Babel (讓瀏覽器能直接讀懂 React JSX 語法) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
 </head>
 <body class="bg-[#f4ebd0]">
   <!-- 遊戲將會顯示在這個 div 裡面 -->
@@ -20,19 +19,6 @@
 
   <!-- 遊戲邏輯與介面 (React 程式碼) -->
   <script type="text/babel">
-    const firebaseConfig = {
-      apiKey: "AIzaSyBE5fLW8-zI7zVQchm2Pn2uphwOlYs98zI",
-      authDomain: "multiplayerwilderness-75a0b.firebaseapp.com",
-      projectId: "multiplayerwilderness-75a0b",
-      storageBucket: "multiplayerwilderness-75a0b.firebasestorage.app",
-      messagingSenderId: "579028026049",
-      appId: "1:579028026049:web:fcf5d2ba38cca2a34f0a40",
-      measurementId: "G-WJ814JTK0M"
-    };
-
-    // 初始化連線
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
     
     const { useState, useEffect, useRef } = React;
 
