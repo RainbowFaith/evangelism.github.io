@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>《民數記》之曠野求生</title>
+  <title>《民數記》之曠野求生 - 宣教與神學應用版</title>
   <!-- 引入 Tailwind CSS (負責排版與美化) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- 引入 React 與 ReactDOM -->
@@ -203,6 +203,10 @@
       const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
       const [showAnswer, setShowAnswer] = useState(false);
       
+      const [decks, setDecks] = useState({
+        sacrifice: [], oracle: [], chance: [], special: []
+      });
+
       const [modalState, setModalState] = useState({ isOpen: false, type: '', data: null });
 
       const BOARD_SIZE = 40;
@@ -229,6 +233,13 @@
         tileTypes = shuffleArray(tileTypes);
         const newBoard = ['start', ...tileTypes, 'end'];
         setBoard(newBoard);
+
+        setDecks({
+          sacrifice: shuffleArray(PRE_SPIN_QUESTIONS),
+          oracle: shuffleArray(ORACLE_CARDS),
+          chance: shuffleArray(CHANCE_CARDS),
+          special: shuffleArray(SPECIAL_EVENTS)
+        });
 
         setGameState('playing');
         setCurrentTurnIndex(0);
@@ -262,7 +273,11 @@
 
       // 點擊中央會幕獻祭
       const requestSacrifice = () => {
-        const question = shuffleArray(PRE_SPIN_QUESTIONS)[0];
+        let qDeck = [...decks.sacrifice];
+        if (qDeck.length === 0) qDeck = shuffleArray(PRE_SPIN_QUESTIONS);
+        const question = qDeck.shift();
+        setDecks(prev => ({ ...prev, sacrifice: qDeck }));
+        
         setShowAnswer(false);
         setModalState({ isOpen: true, type: 'pre-sacrifice', data: { question } });
       };
@@ -308,17 +323,26 @@
           closeModal();
           nextTurn();
         } else if (tileType === 'chance') {
-          const card = shuffleArray(CHANCE_CARDS)[0];
+          let cDeck = [...decks.chance];
+          if (cDeck.length === 0) cDeck = shuffleArray(CHANCE_CARDS);
+          const card = cDeck.shift();
+          setDecks(prev => ({ ...prev, chance: cDeck }));
           setModalState({ isOpen: true, type: 'chance', data: { card } });
         } else if (tileType === 'oracle') {
-          const card = shuffleArray(ORACLE_CARDS)[0];
+          let oDeck = [...decks.oracle];
+          if (oDeck.length === 0) oDeck = shuffleArray(ORACLE_CARDS);
+          const card = oDeck.shift();
+          setDecks(prev => ({ ...prev, oracle: oDeck }));
           setShowAnswer(false); 
           setModalState({ isOpen: true, type: 'oracle', data: { card } });
         } else if (tileType === 'sabbath') {
           setModalState({ isOpen: true, type: 'sabbath-event', data: null });
         } else if (tileType === 'special') {
-          const event = shuffleArray(SPECIAL_EVENTS)[0];
-          setModalState({ isOpen: true, type: 'special-discussion', data: { event } });
+          let sDeck = [...decks.special];
+          if (sDeck.length === 0) sDeck = shuffleArray(SPECIAL_EVENTS);
+          const event = sDeck.shift();
+          setDecks(prev => ({ ...prev, special: sDeck }));
+          setModalState({ isOpen: true, type: 'special-discussion', data: { event, team: currentTeam } });
         }
       };
 
@@ -341,19 +365,19 @@
         if (newPos !== BOARD_SIZE - 1) nextTurn(updatedTeams);
       };
 
-      const applySpecialEventAdjustments = (adjustments) => {
+      const applySpecialEventAdjustments = (adjustment) => {
         const updatedTeams = [...teams];
+        let newPos = updatedTeams[currentTurnIndex].position + (adjustment || 0);
         let isGameOver = false;
-        teams.forEach((team, idx) => {
-          let newPos = team.position + (adjustments[idx] || 0);
-          if (newPos < 0) newPos = 0;
-          if (newPos >= BOARD_SIZE - 1) {
-            newPos = BOARD_SIZE - 1;
-            setGameState('gameover');
-            isGameOver = true;
-          }
-          updatedTeams[idx].position = newPos;
-        });
+        
+        if (newPos < 0) newPos = 0;
+        if (newPos >= BOARD_SIZE - 1) {
+          newPos = BOARD_SIZE - 1;
+          setGameState('gameover');
+          isGameOver = true;
+        }
+        updatedTeams[currentTurnIndex].position = newPos;
+        
         setTeams(updatedTeams);
         closeModal();
         if (!isGameOver) nextTurn(updatedTeams);
@@ -403,7 +427,7 @@
           <header className="bg-amber-900 text-white text-center py-4 shadow-md flex-shrink-0">
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-wider flex justify-center items-center gap-3">
               <BookOpenIcon size={32} />
-              《民數記》曠野求生 <span className="text-base md:text-xl bg-amber-700 px-3 py-1 rounded-full">進入應許之地！</span>
+              《民數記》曠野求生 <span className="text-base md:text-xl bg-amber-700 px-3 py-1 rounded-full">神學挑戰版</span>
             </h1>
           </header>
 
@@ -414,7 +438,7 @@
                   <SettingsIcon /> 遊戲設定
                 </h2>
                 <div className="mb-8">
-                  <label className="block text-lg mb-4 font-semibold text-gray-700">請選擇分組數量 (2-12組)：</label>
+                  <label className="block text-lg mb-4 font-semibold text-gray-700">請選擇班級的分組數量 (2-12組)：</label>
                   <select 
                     value={teamsCount} 
                     onChange={(e) => setTeamsCount(Number(e.target.value))}
@@ -452,7 +476,7 @@
                     <span className="text-2xl font-extrabold tracking-widest">獻祭求問</span>
                     {currentTeam.waitTurns > 0 && <span className="absolute bottom-4 bg-red-600 text-white text-sm px-3 py-1 rounded-full font-bold shadow-md">安息日休息中</span>}
                   </button>
-                  <p className="mt-4 text-sm text-gray-500 font-medium">由利未祭司負責獻祭並發問</p>
+                  <p className="mt-4 text-sm text-gray-500 font-medium">由老師(利未人)點擊獻祭並發問</p>
                 </div>
 
                 {/* 隊伍進度板 */}
@@ -514,10 +538,10 @@
                 
                 {/* 圖例說明 */}
                 <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm font-bold text-amber-900 bg-white/60 p-3 rounded-2xl">
-                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-orange-200 border-2 border-orange-400 rounded"></div>機會 (曠野遭遇)</span>
-                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded"></div>神諭 (與神相遇)</span>
-                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-red-200 border-2 border-red-500 rounded"></div>重大事件 (反思討論)</span>
-                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-purple-200 border-2 border-purple-400 rounded"></div>安息日 (安穩主裡)</span>
+                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-orange-200 border-2 border-orange-400 rounded"></div>機會 (曠野事件)</span>
+                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded"></div>神諭 (神學問答)</span>
+                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-red-200 border-2 border-red-500 rounded"></div>重大事件 (全班討論)</span>
+                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-purple-200 border-2 border-purple-400 rounded"></div>安息日 (停兩回合)</span>
                 </div>
               </div>
 
@@ -528,7 +552,7 @@
           {gameState === 'gameover' && (
             <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
               <div className="bg-white p-10 md:p-14 rounded-3xl shadow-2xl text-center max-w-2xl w-full border-8 border-green-600">
-                <h2 className="text-4xl md:text-5xl font-extrabold text-green-700 mb-6">感謝神！進入迦南！</h2>
+                <h2 className="text-4xl md:text-5xl font-extrabold text-green-700 mb-6">哈利路亞！進入迦南！</h2>
                 <p className="text-2xl md:text-3xl text-gray-700 mb-8 font-medium">
                   歷經四十年的曠野挑戰，<br/>
                   恭喜 <span className={`inline-block mt-4 px-6 py-2 rounded-xl text-white font-black text-3xl ${currentTeam.color}`}>{currentTeam.name}</span><br/>
@@ -551,7 +575,7 @@
                   <div className="p-8">
                     <div className="flex items-center gap-3 mb-6">
                       <FlameIcon className="text-amber-600" size={32} />
-                      <h2 className="text-2xl font-extrabold text-amber-900">獻祭求問 - 信心考驗</h2>
+                      <h2 className="text-2xl font-extrabold text-amber-900">獻祭求問 - 測試信心</h2>
                     </div>
                     <div className="bg-amber-50 border-l-4 border-amber-500 p-6 rounded-r-xl mb-6">
                       <h3 className="text-2xl md:text-3xl font-bold text-gray-800 leading-tight">
@@ -562,7 +586,7 @@
                     <div className="p-6 bg-gray-100 rounded-2xl mb-8 min-h-[120px] flex flex-col justify-center items-center border-2 border-dashed border-gray-300">
                       {!showAnswer ? (
                         <button onClick={() => setShowAnswer(true)} className="bg-gray-800 hover:bg-gray-900 text-white px-8 py-3 rounded-full text-lg font-bold shadow-md transition-all">
-                          顯示答案
+                          顯示參考答案 (由老師評判)
                         </button>
                       ) : (
                         <div className="text-center w-full">
@@ -574,7 +598,7 @@
                     
                     <div className="flex flex-col md:flex-row gap-4">
                       <button onClick={() => executeSacrifice(true)} className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl text-xl font-bold flex justify-center items-center gap-2 shadow-lg">
-                        <CheckCircle2Icon size={28} /> 答對了！(蒙恩前進)
+                        <CheckCircle2Icon size={28} /> 答對了！(獲得獻祭步數)
                       </button>
                       <button onClick={() => executeSacrifice(false)} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl text-xl font-bold flex justify-center items-center gap-2 shadow-lg">
                         <XCircleIcon size={28} /> 答錯了 (無法前進)
@@ -682,7 +706,7 @@
                 {modalState.type === 'special-discussion' && (
                   <SpecialEventModal 
                     event={modalState.data.event} 
-                    teams={teams}
+                    team={modalState.data.team}
                     onComplete={applySpecialEventAdjustments} 
                   />
                 )}
@@ -695,13 +719,11 @@
     }
 
     // 重大事件討論組件
-    function SpecialEventModal({ event, teams, onComplete }) {
-      const [adjustments, setAdjustments] = useState(teams.map(() => 0));
+    function SpecialEventModal({ event, team, onComplete }) {
+      const [adjustment, setAdjustment] = useState(0);
 
-      const changeScore = (teamIndex, delta) => {
-        const newAdj = [...adjustments];
-        newAdj[teamIndex] += delta;
-        setAdjustments(newAdj);
+      const changeScore = (delta) => {
+        setAdjustment(prev => prev + delta);
       };
 
       return (
@@ -718,41 +740,36 @@
             
             <div className="mb-8">
               <h3 className="text-2xl font-black text-red-800 mb-4 flex items-center gap-2">
-                <BookOpenIcon size={24}/> 【反思與討論】
+                <BookOpenIcon size={24}/> 【反思與分享】
               </h3>
+              <div className="bg-amber-100 border-2 border-amber-300 p-4 rounded-xl mb-4 text-center shadow-inner">
+                 <span className="text-xl md:text-2xl font-bold text-amber-900 flex items-center justify-center gap-2">
+                   請 <div className={`w-5 h-5 rounded-full ${team.color} shadow-sm`}></div> <span className="underline decoration-amber-500 decoration-4">{team.name}</span> 派一位代表分享！
+                 </span>
+              </div>
               <p className="text-xl font-bold text-gray-800 bg-gray-100 p-6 rounded-2xl leading-relaxed border-2 border-gray-200">
                 {event.discussion}
               </p>
             </div>
 
-            <div className="border-t-4 border-gray-100 pt-6">
+            <div className="border-t-4 border-gray-100 pt-6 text-center">
               <h3 className="text-lg font-bold text-gray-600 mb-4 bg-yellow-100 p-2 rounded inline-block">
-                祭司檢驗區 (可為積極參與討論的小組加減步數)：
+                祭司檢驗區 (為 {team.name} 加減步數)：
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {teams.map((team, idx) => (
-                  <div key={team.id} className="flex flex-col items-center bg-white border-2 border-gray-200 p-3 rounded-xl shadow-sm">
-                    <span className="font-bold flex items-center gap-2 text-base md:text-lg mb-2">
-                      <div className={`w-4 h-4 rounded-full ${team.color} shadow-inner`}></div>
-                      {team.name}
-                    </span>
-                    <div className="flex items-center gap-3 bg-gray-50 rounded-full px-2 py-1 border border-gray-200">
-                      <button onClick={() => changeScore(idx, -1)} className="w-8 h-8 rounded-full bg-red-100 text-red-700 font-bold hover:bg-red-200 flex items-center justify-center text-xl transition-colors">-</button>
-                      <span className="w-8 text-center font-extrabold text-xl">{adjustments[idx] > 0 ? `+${adjustments[idx]}` : adjustments[idx]}</span>
-                      <button onClick={() => changeScore(idx, 1)} className="w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold hover:bg-green-200 flex items-center justify-center text-xl transition-colors">+</button>
-                    </div>
-                  </div>
-                ))}
+              <div className="flex justify-center items-center gap-6 bg-gray-50 rounded-full px-6 py-3 border-2 border-gray-200 w-fit mx-auto shadow-sm">
+                <button onClick={() => changeScore(-1)} className="w-12 h-12 rounded-full bg-red-100 text-red-700 font-bold hover:bg-red-200 flex items-center justify-center text-3xl transition-colors">-</button>
+                <span className="w-12 text-center font-extrabold text-3xl">{adjustment > 0 ? `+${adjustment}` : adjustment}</span>
+                <button onClick={() => changeScore(1)} className="w-12 h-12 rounded-full bg-green-100 text-green-700 font-bold hover:bg-green-200 flex items-center justify-center text-3xl transition-colors">+</button>
               </div>
             </div>
           </div>
 
           <div className="p-6 bg-gray-100 border-t border-gray-300 text-right shrink-0">
             <button 
-              onClick={() => onComplete(adjustments)} 
+              onClick={() => onComplete(adjustment)} 
               className="bg-red-700 hover:bg-red-800 text-white px-10 py-4 rounded-full text-xl font-bold shadow-lg transition-transform hover:scale-105"
             >
-              完成討論並結算步數
+              完成分享並結算步數
             </button>
           </div>
         </div>
