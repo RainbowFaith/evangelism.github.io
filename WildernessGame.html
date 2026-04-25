@@ -23,7 +23,7 @@
     const { useState, useEffect, useRef } = React;
 
     // =========================================================================
-    // ↓↓↓↓↓ 自訂編輯區：神學內容、問題與事件 ↓↓↓↓↓
+    // ↓↓↓↓↓ 自訂編輯區：問題與事件 ↓↓↓↓↓
     // =========================================================================
 
     // 1. 十二支派名稱 (扣除利未支派，因主持人代表利未祭司負責獻祭與引導)
@@ -132,7 +132,7 @@
       { text: "【機會】眾人同心合意敬拜神，神的榮光顯現在會幕中，大得激勵！", effect: 4 }
     ];
 
-    // 5. 重大事件 (5個核心事件，觸發全班討論，祭司可加減分)
+    // 5. 重大事件 (5個核心事件，觸發反思討論，祭司可加減分)
     const SPECIAL_EVENTS = [
       {
         title: "重大事件：十二探子報惡信",
@@ -429,7 +429,7 @@
           <header className="bg-amber-900 text-white text-center py-4 shadow-md flex-shrink-0">
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-wider flex justify-center items-center gap-3">
               <BookOpenIcon size={32} />
-              《民數記》曠野求生 <span className="text-base md:text-xl bg-amber-700 px-3 py-1 rounded-full">神學挑戰版</span>
+              《民數記》曠野求生 <span className="text-base md:text-xl bg-amber-700 px-3 py-1 rounded-full">進入應許之地！</span>
             </h1>
           </header>
 
@@ -478,7 +478,7 @@
                     <span className="text-2xl font-extrabold tracking-widest">獻祭求問</span>
                     {currentTeam.waitTurns > 0 && <span className="absolute bottom-4 bg-red-600 text-white text-sm px-3 py-1 rounded-full font-bold shadow-md">安息日休息中</span>}
                   </button>
-                  <p className="mt-4 text-sm text-gray-500 font-medium">由老師(利未人)點擊獻祭並發問</p>
+                  <p className="mt-4 text-sm text-gray-500 font-medium">由利未祭司點擊獻祭並發問</p>
                 </div>
 
                 {/* 隊伍進度板 */}
@@ -541,8 +541,8 @@
                 {/* 圖例說明 */}
                 <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm font-bold text-amber-900 bg-white/60 p-3 rounded-2xl">
                   <span className="flex items-center gap-2"><div className="w-4 h-4 bg-orange-200 border-2 border-orange-400 rounded"></div>機會 (曠野事件)</span>
-                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded"></div>神諭 (神學問答)</span>
-                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-red-200 border-2 border-red-500 rounded"></div>重大事件 (全班討論)</span>
+                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-blue-200 border-2 border-blue-400 rounded"></div>神諭 (與神對話)</span>
+                  <span className="flex items-center gap-2"><div className="w-4 h-4 bg-red-200 border-2 border-red-500 rounded"></div>重大事件 (分享討論)</span>
                   <span className="flex items-center gap-2"><div className="w-4 h-4 bg-purple-200 border-2 border-purple-400 rounded"></div>安息日 (停兩回合)</span>
                 </div>
               </div>
@@ -588,7 +588,7 @@
                     <div className="p-6 bg-gray-100 rounded-2xl mb-8 min-h-[120px] flex flex-col justify-center items-center border-2 border-dashed border-gray-300">
                       {!showAnswer ? (
                         <button onClick={() => setShowAnswer(true)} className="bg-gray-800 hover:bg-gray-900 text-white px-8 py-3 rounded-full text-lg font-bold shadow-md transition-all">
-                          顯示參考答案 (由老師評判)
+                          顯示參考答案 (由祭司查驗)
                         </button>
                       ) : (
                         <div className="text-center w-full">
